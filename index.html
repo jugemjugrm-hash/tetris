@@ -1,0 +1,3091 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f1020">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>カラーブロック CHAOS</title>
+<style>
+  :root {
+    --bg: #0f1020;
+    --panel: #1a1c33;
+    --line: #2e3157;
+    --text: #e6e8ff;
+    --dim: #8f93c0;
+    --accent: #56d1dc;
+    --gold: #ffd93d;
+    --danger: #ff5c72;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 0%, #1c1f3d 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: "Segoe UI", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root { height: 100%; display: flex; flex-direction: column; }
+  #app {
+    flex: 1 1 auto; min-height: 0;
+    display: flex; align-items: center; justify-content: center;
+    gap: 22px;
+    padding: 12px;
+  }
+
+  .stage { position: relative; flex: 0 0 auto; }
+  canvas { display: block; margin: 0 auto; }
+  #board {
+    background: #0a0b17;
+    border: 2px solid var(--line);
+    border-radius: 6px;
+    box-shadow: 0 0 40px rgba(86, 209, 220, .12), inset 0 0 60px rgba(0,0,0,.6);
+    touch-action: none;
+  }
+  .panel {
+    display: flex; flex-direction: column; gap: 14px;
+    width: 172px; flex: 0 0 auto;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .card h2 {
+    margin: 0 0 8px;
+    font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--dim); font-weight: 600;
+  }
+  .stat { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0; }
+  .stat span:first-child { color: var(--dim); font-size: 12px; }
+  .stat span:last-child { font-size: 19px; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .keys { font-size: 11.5px; line-height: 1.85; color: var(--dim); }
+  .keys b { color: var(--text); font-weight: 600; }
+  .legend { font-size: 11px; line-height: 1.75; color: var(--dim); }
+  .legend i {
+    display: inline-block; width: 11px; height: 11px; border-radius: 2px;
+    vertical-align: -1px; margin-right: 5px;
+  }
+  .legend .g { background: #4b5065; box-shadow: inset 0 0 0 1px #878da8; }
+  .legend .b { background: #16080d; box-shadow: inset 0 0 0 2px #ff5c72; }
+  .legend .p { background: #5cff9d; }
+  .legend .p2 { background: #c46bff; }
+  .legend .v { background: #b6ff3d; }
+  .legend .r { background: linear-gradient(135deg,#ff5c72,#ffd93d,#4ad991,#37d3e8,#c07dff); }
+  .rulelink {
+    display: inline-block; margin-top: 8px;
+    font-size: 11px; letter-spacing: .08em; color: var(--accent);
+    text-decoration: none; border-bottom: 1px solid rgba(86,209,220,.35);
+  }
+  .rulelink:hover { color: #fff; }
+  .legend .c { background: conic-gradient(#ff5c72, #ff9f45, #ffd93d, #4ad991, #4a7dff, #c07dff, #ff5c72); }
+
+  #overlay {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; text-align: center; padding: 12px;
+    background: rgba(10, 11, 23, .86);
+    border-radius: 6px;
+    overflow: auto;
+  }
+  #overlay.show { display: flex; }
+  #overlay .title { font-size: clamp(22px, 7vw, 30px); font-weight: 800; letter-spacing: .05em; }
+  #overlay .sub { font-size: clamp(11px, 3.2vw, 13px); color: var(--dim); line-height: 1.7; }
+
+  #toast {
+    position: absolute; left: 0; right: 0; top: 28%;
+    text-align: center; pointer-events: none;
+    opacity: 0; transition: opacity .2s;
+  }
+  #toast.show { opacity: 1; }
+  #toast .t-main {
+    font-size: clamp(16px, 5.2vw, 22px); font-weight: 800; letter-spacing: .06em;
+    color: var(--accent); text-shadow: 0 0 18px rgba(86,209,220,.6);
+  }
+  #toast .t-sub {
+    margin-top: 2px;
+    font-size: clamp(11px, 3.4vw, 14px); font-weight: 800;
+    color: var(--gold); text-shadow: 0 0 14px rgba(255,217,61,.5);
+  }
+  #toast.big .t-main { color: var(--gold); text-shadow: 0 0 22px rgba(255,217,61,.7); }
+  #toast.event .t-main {
+    color: #fff; text-shadow: 0 0 10px var(--danger), 0 0 26px var(--danger);
+    font-size: clamp(18px, 6.4vw, 27px);
+    animation: shakeTx .28s ease-in-out 2;
+  }
+  #toast.event .t-sub { color: #ffb3bd; text-shadow: none; }
+  @keyframes shakeTx {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  /* タイトル画面 */
+  #title {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 10px;
+    background: linear-gradient(180deg, rgba(10,11,23,.93), rgba(15,16,32,.98));
+    border-radius: 6px;
+    overflow: auto;
+  }
+  #title.show { display: flex; }
+  .logo {
+    display: flex; gap: 3px;
+    font-size: clamp(26px, 8.5vw, 38px); font-weight: 900; letter-spacing: .03em; line-height: 1;
+  }
+  .logo span {
+    display: inline-block;
+    text-shadow: 0 0 16px currentColor;
+    animation: bob 2.4s ease-in-out infinite;
+  }
+  .logo span:nth-child(2) { animation-delay: .12s; }
+  .logo span:nth-child(3) { animation-delay: .24s; }
+  .logo span:nth-child(4) { animation-delay: .36s; }
+  .logo span:nth-child(5) { animation-delay: .48s; }
+  .logo span:nth-child(6) { animation-delay: .60s; }
+  .logo span:nth-child(7) { animation-delay: .72s; }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .logo-sub { font-size: clamp(9px, 2.8vw, 12px); letter-spacing: .4em; color: var(--dim); margin-top: -4px; }
+  .hiscore {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 20px;
+    min-width: 180px;
+  }
+  .hiscore .label { font-size: 10px; letter-spacing: .2em; color: var(--dim); }
+  .hiscore .value {
+    font-size: clamp(20px, 6.4vw, 28px); font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--gold); text-shadow: 0 0 14px rgba(255,217,61,.45);
+  }
+  .btn {
+    appearance: none; cursor: pointer;
+    font: inherit; font-size: 16px; font-weight: 800; letter-spacing: .18em;
+    color: #0a0b17;
+    background: var(--accent);
+    border: none; border-radius: 999px;
+    padding: 11px 32px;
+    box-shadow: 0 6px 0 #2a8d95, 0 0 24px rgba(86,209,220,.35);
+    transition: transform .08s, box-shadow .08s, filter .15s;
+    touch-action: manipulation;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #2a8d95, 0 0 24px rgba(86,209,220,.35); }
+  .btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .btn.chaos {
+    background: linear-gradient(135deg, #ff5c72, #ff9f45);
+    color: #1a0b10;
+    box-shadow: 0 6px 0 #9c2f3e, 0 0 30px rgba(255,92,114,.45);
+  }
+  .btn.chaos:active { box-shadow: 0 2px 0 #9c2f3e, 0 0 30px rgba(255,92,114,.45); }
+  .btn.ghost {
+    color: var(--text); background: transparent;
+    border: 1px solid var(--line); box-shadow: none;
+    font-size: 13px; padding: 9px 20px; letter-spacing: .1em;
+  }
+  .btn.ghost:active { transform: none; }
+  .hint { font-size: clamp(9px, 2.7vw, 11px); color: var(--dim); letter-spacing: .06em; line-height: 1.8; }
+  .hint em { color: #ffb3bd; font-style: normal; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .modes { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+
+  /* サウンド切り替え */
+  #soundBtn {
+    position: fixed; top: calc(8px + env(safe-area-inset-top)); right: 8px; z-index: 30;
+    appearance: none; cursor: pointer;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid var(--line); background: rgba(26,28,51,.9);
+    color: var(--text); font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation;
+  }
+  #soundBtn.off { color: var(--dim); opacity: .6; }
+
+  /* タッチ用コントローラ */
+  #pad {
+    display: none;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 7px;
+    width: 100%; max-width: 430px;
+    margin: 0 auto;
+    padding: 4px 10px calc(8px + env(safe-area-inset-bottom));
+    touch-action: none;
+  }
+  body.touch #pad { display: grid; }
+  .pbtn {
+    appearance: none; border: 1px solid var(--line);
+    background: linear-gradient(180deg, #24274a, #191b32);
+    color: var(--text);
+    font: inherit; font-size: 19px; font-weight: 700; letter-spacing: .04em;
+    border-radius: 12px; height: 50px;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none; cursor: pointer;
+  }
+  .pbtn small { font-size: 11px; letter-spacing: .12em; }
+  .pbtn.on { background: var(--accent); color: #0a0b17; border-color: var(--accent); }
+  .pbtn.act { color: var(--accent); }
+  .pbtn.span2 { grid-column: span 2; }
+  .pbtn.locked { opacity: .4; }
+
+  /* ---------- モバイル / 縦長レイアウト ---------- */
+  @media (max-width: 760px) {
+    #app {
+      flex-direction: column; justify-content: flex-start;
+      gap: 7px; padding: 6px 6px 0;
+      padding-top: calc(6px + env(safe-area-inset-top));
+    }
+    .panel { flex-direction: row; width: 100%; max-width: 430px; gap: 7px; }
+    .panel-stats { order: 1; }
+    .panel-pieces { order: 2; }
+    .stage { order: 3; }
+    .card { padding: 6px 8px; }
+    .card h2 { margin: 0 0 3px; font-size: 9px; letter-spacing: .12em; }
+    .keys-card, .legend-card { display: none; }
+    .stats-card { flex: 1 1 auto; }
+    .stats-card .stats { display: flex; justify-content: space-between; gap: 4px; }
+    .stat { flex-direction: column; align-items: center; margin: 0; flex: 1; }
+    .stat span:first-child { font-size: 9px; letter-spacing: .1em; }
+    .stat span:last-child { font-size: 15px; }
+    .hold-card { flex: 0 0 auto; }
+    .next-card { flex: 1 1 auto; }
+    #soundBtn { width: 34px; height: 34px; font-size: 15px; top: calc(4px + env(safe-area-inset-top)); right: 4px; }
+    #title { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+<button id="soundBtn" type="button" aria-label="サウンド切り替え">&#128266;</button>
+<div id="root">
+  <div id="app">
+
+    <div class="panel panel-pieces">
+      <div class="card hold-card">
+        <h2>Hold</h2>
+        <canvas id="hold"></canvas>
+      </div>
+      <div class="card next-card">
+        <h2>Next</h2>
+        <canvas id="next"></canvas>
+      </div>
+    </div>
+
+    <div class="stage">
+      <canvas id="board"></canvas>
+      <div id="toast"><div class="t-main"></div><div class="t-sub"></div></div>
+
+      <div id="title">
+        <div>
+          <div class="logo">
+            <span style="color:#ff5c72">C</span><span style="color:#ff9f45">O</span><span style="color:#ffd93d">L</span><span style="color:#4ad991">O</span><span style="color:#37d3e8">R</span><span style="color:#4a7dff">I</span><span style="color:#c07dff">X</span>
+          </div>
+          <div class="logo-sub">カラーブロック</div>
+        </div>
+        <div class="hiscore">
+          <div class="label">HIGH SCORE</div>
+          <div class="value" id="titleBest">0</div>
+        </div>
+        <div class="modes">
+          <button class="btn chaos" id="startBtn" type="button">START</button>
+          <a class="btn ghost" id="gotoTetris" href="tetris.html">普通のテトリスで遊ぶ</a>
+          <a class="btn ghost" id="gotoRules" href="rules.html">ルールブック</a>
+        </div>
+        <div class="hint" id="startHint">
+          同じ色を <b>縦・横・斜めに3つ以上</b> そろえると消える<br>
+          Enter・Space でスタート
+        </div>
+      </div>
+
+      <div id="overlay">
+        <div class="title" id="ovTitle">PAUSE</div>
+        <div class="sub" id="ovSub"></div>
+        <div class="btn-row" id="ovButtons">
+          <button class="btn ghost" id="retryBtn" type="button">もう一度</button>
+          <button class="btn ghost" id="titleBtn" type="button">タイトルへ</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel panel-stats">
+      <div class="card stats-card">
+        <h2>Status</h2>
+        <div class="stats">
+          <div class="stat"><span>SCORE</span><span id="score">0</span></div>
+          <div class="stat"><span>BLOCKS</span><span id="lines">0</span></div>
+          <div class="stat"><span>LEVEL</span><span id="level">1</span></div>
+          <div class="stat"><span>COMBO</span><span id="combo">0</span></div>
+          <div class="stat"><span>BEST</span><span id="best">0</span></div>
+        </div>
+      </div>
+      <div class="card legend-card">
+        <h2>Rules</h2>
+        <div class="legend">
+          <span style="color:#ffd93d">&#9670;</span> 同色 <b>3つ以上</b>（縦・横・斜め）で消える<br>
+          <i class="g"></i>おじゃま … 爆弾系でしか消せない<br>
+          <i class="b"></i>爆弾 ／ <i class="c"></i>カラー ／ <i class="r"></i>レインボー<br>
+          <i class="p"></i><i class="p2"></i>寄生虫 ・ <i class="v"></i>ウイルス に注意<br>
+          <span style="color:#ff5c72">12万点〜 大混乱</span><br>
+          <span style="color:#8f93c0">まとめ消し・連続消しでスコア倍率アップ</span>
+        </div>
+        <a class="rulelink" href="rules.html">&#9654; ルールブック</a>
+      </div>
+      <div class="card keys-card">
+        <h2>Controls</h2>
+        <div class="keys">
+          <b>&larr; &rarr;</b> 移動<br>
+          <b>&darr;</b> ソフトドロップ<br>
+          <b>Space</b> ハードドロップ<br>
+          <b>C</b> ホールド<br>
+          <b>P</b> 一時停止 ／ <b>M</b> サウンド<br>
+          <b>R</b> リスタート
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="pad">
+    <button class="pbtn" type="button" data-act="left">&#9664;</button>
+    <button class="pbtn" type="button" data-act="down">&#9660;</button>
+    <button class="pbtn" type="button" data-act="right">&#9654;</button>
+    <button class="pbtn act" type="button" data-act="drop">&#10515;</button>
+    <button class="pbtn span2" type="button" data-act="hold"><small>HOLD</small></button>
+    <button class="pbtn span2" type="button" data-act="pause">&#10073;&#10073;</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // =====================================================================
+  //  調整用パラメータ
+  // =====================================================================
+  var COLS = 6, ROWS = 15, HIDDEN = 0;
+  var TOTAL_ROWS = ROWS + HIDDEN;
+  var CELL = 30;                 // layout() で画面サイズに合わせて変わる
+  var CELL_MAX = 54;             // 盤面が小さくなった分、1マスを大きく
+  var SPAWN_X = 3;               // 出現する列 (中央)
+
+  var MATCH_MIN     = 3;         // そろえる必要数
+  var BOMB_RADIUS   = 1;         // 1 => 3x3 の範囲が吹き飛ぶ
+  var BOMB_SCORE    = 2000;      // 爆弾ブロックが出はじめるスコア
+  var BOMB_CHANCE   = 0.055;     // 爆弾ブロックが降ってくる確率
+  var CBOMB_SCORE   = 20000;      // カラー爆弾が出はじめるスコア
+  var CBOMB_CHANCE  = 0.05;      // カラー爆弾が降ってくる確率
+  var CBOMB_RADIUS  = 1;         // 1 => 3x3 の範囲を塗り替える
+  var GARBAGE_SCORE = 2000;      // おじゃまブロックが出はじめるスコア
+  var GARBAGE_CHANCE= 0.03;      // 自分で落とすブロックがおじゃまになる確率
+  var RAIN_GARBAGE  = 0.45;      // ランダム落下でおじゃまが混ざる割合
+  var PARA_CHANCE   = 0.05;      // 寄生虫入りブロックの確率
+  var PARA_INTERVAL = 7000;      // 寄生虫が引っ越す間隔 (ms)
+  var PARA_LATE_SCORE = 8000;    // これ以降「おじゃま虫」も1体出るようになる
+
+  var HOLD_SCORE    = 20000;      // ホールドが解放されるスコア
+  var PARA_RESPAWN_MIN = 8000;   // 撃退した寄生虫が復活するまで (ms)
+  var PARA_RESPAWN_MAX = 12000;
+
+  // レインボー爆弾: 10000点から。盤面の特定の1色を全部消す。
+  var RBOMB_SCORE   = 70000;
+  var RBOMB_CHANCE  = 0.04;
+
+  // スコア2倍タイム: 10000点から、毎秒1%
+  var DOUBLE_SCORE  = 70000;
+  var DOUBLE_CHANCE = 0.010;
+  var DOUBLE_MS     = 15000;     // ×2 が続く時間
+
+  // 首切り役人: 10000点から、毎秒0.75%
+  var HEADS_SCORE   = 70000;
+  var HEADS_CHANCE  = 0.0075;
+
+  // 15000点から: 寄生虫3体・ブロックシャッフル・マイナスイベント多発
+  var MAYHEM_SCORE       = 120000;
+  var SHUFFLE_CHANCE     = 0.008;   // 毎秒0.8%
+  var EVENT_CHANCE_MAYHEM = 0.10;   // 通常イベント (平均 約10秒)
+  var VIRUS_CHANCE_MAYHEM = 0.012;  // バイオハザード
+  var RAIN_GARBAGE_MAYHEM = 0.65;   // ランダム落下のおじゃま率
+  var BLACKOUT_MAYHEM     = 8500;   // 停電時間
+
+  // まとめ消し / 連続消しボーナス
+  var SIZE_STEP  = 0.25;         // MATCH_MIN を超える1個ごとの倍率
+  var COMBO_STEP = 0.20;         // 連続消し1回ごとの倍率
+
+  // 流星群: 1000点から、毎秒1%
+  var METEOR_SCORE  = 2000;
+  var METEOR_CHANCE = 0.010;
+  var METEOR_MIN    = 3;
+  var METEOR_MAX    = 5;
+
+  // バイオハザード: 3000点から、毎秒0.5%
+  var VIRUS_SCORE      = 8000;
+  var VIRUS_CHANCE     = 0.005;
+  var VIRUS_SPREAD_MS  = 2600;   // 感染が広がる間隔
+  var VIRUS_SPREAD_P   = 0.35;   // 1体あたりの伝染確率
+  var VIRUS_MAX_NEW    = 2;      // 1回の伝染で増える最大数
+  var VIRUS_LOSE_MIN   = 10;     // これ未満のブロック数では全滅負けにしない
+
+  var HARD_SCORE    = 40000;      // ここから難易度が一段上がる
+  var SPEED_EARLY   = 1.10;      // 1000点〜 落下速度 +10%
+  var SPEED_HARD    = 1.20;      // HARD_SCORE〜 落下速度 +20%
+  var SPEED_SCORE   = 2000;
+
+  // イベントは1秒ごとに確率で抽選する
+  var EVENT_COOLDOWN    = 8000;  // 発生後、次の抽選までの休止時間 (ms)
+  var EVENT_CHANCE      = 0.030; // 1秒あたりの発生確率 (平均 約33秒)
+  var EVENT_CHANCE_HARD = 0.055; // HARD_SCORE 以降 (平均 約18秒)
+
+  var BLACKOUT_MS   = 5200;      // 停電の継続時間
+  var BLACKOUT_HARD = 7200;      // HARD_SCORE 以降の停電時間
+  var LEVEL_PER     = 30;        // 何ブロック消すごとにレベルアップするか
+  var ALL_CLEAR_MIN = 12;        // 全消しボーナスに必要な、消す直前の盤面ブロック数
+
+  // 色ブロック (スコアが COLOR_SCORES を超えるたびに1種類ずつ増える → 4 / 5 / 6)
+  var COLOR_BASE   = 4;
+  var COLOR_SCORES = [8000, 20000];
+  var COLOR_KEYS = ['R', 'O', 'Y', 'E', 'B', 'P'];
+  var COLORS = {
+    R: '#ff5c72',   // 赤
+    O: '#ff9f45',   // 橙
+    Y: '#ffd93d',   // 黄
+    E: '#4ad991',   // 緑
+    B: '#4a7dff',   // 青
+    P: '#c07dff',   // 紫
+    C: '#37d3e8',   // 水
+    G: '#4b5065',   // おじゃま
+    '*': '#16080d', // 爆弾
+    '%': '#1b1030', // カラー爆弾
+    '#': '#0d1030'  // レインボー爆弾
+  };
+
+  function hard() { return score >= HARD_SCORE; }
+  function mayhem() { return score >= MAYHEM_SCORE; }
+  function holdUnlocked() { return score >= HOLD_SCORE; }
+
+  // まとめて消すほど、連続で消すほど倍率が上がる
+  function sizeMul(count) { return 1 + Math.max(0, count - MATCH_MIN) * SIZE_STEP; }
+  function comboMul() { return 1 + Math.max(0, combo) * COMBO_STEP; }
+  function bonusMul(count) { return sizeMul(count) * comboMul(); }
+  function scoreMul() { return doubleTimer > 0 ? 2 : 1; }
+
+  // 得点はすべてここを通す (スコア2倍タイムを反映して、実際に入った点を返す)
+  function applyScore(v) {
+    var g = Math.round(v * scoreMul());
+    score += g;
+    return g;
+  }
+  function mulLabel(m) { return m > 1.001 ? '  x' + (Math.round(m * 100) / 100) : ''; }
+
+  function speedMul() {
+    if (score >= HARD_SCORE) return SPEED_HARD;
+    if (score >= SPEED_SCORE) return SPEED_EARLY;
+    return 1;
+  }
+
+  function eventChance() {
+    if (mayhem()) return EVENT_CHANCE_MAYHEM;
+    return hard() ? EVENT_CHANCE_HARD : EVENT_CHANCE;
+  }
+  function virusChance() { return mayhem() ? VIRUS_CHANCE_MAYHEM : VIRUS_CHANCE; }
+
+  function colorCount() {
+    var n = COLOR_BASE;
+    for (var i = 0; i < COLOR_SCORES.length; i++) if (score >= COLOR_SCORES[i]) n++;
+    return Math.min(n, COLOR_KEYS.length);
+  }
+
+  // =====================================================================
+  //  サウンド (WebAudio: 効果音 + チップチューンBGM)
+  // =====================================================================
+  var Snd = (function () {
+    var ac = null, master = null, comp = null;
+    var sfxG = null, bgmG = null, bgmLP = null;
+    var delay = null, delayFb = null, delayWet = null;
+    var ready = false, enabled = true;
+    var noiseBuf = null;
+    var timer = null, nextTime = 0, stepIdx = 0, playing = false;
+    var bpm = 172;
+
+    var SEMI = { C:0, 'C#':1, D:2, 'D#':3, E:4, F:5, 'F#':6, G:7, 'G#':8, A:9, 'A#':10, B:11 };
+    var nfCache = {};
+    function nf(name) {
+      if (nfCache[name]) return nfCache[name];
+      var oct = parseInt(name.charAt(name.length - 1), 10);
+      var p = SEMI[name.slice(0, name.length - 1)];
+      var f = 440 * Math.pow(2, ((oct - 4) * 12 + p - 9) / 12);
+      nfCache[name] = f;
+      return f;
+    }
+
+    // コロブチカ (ロシア民謡 / パブリックドメイン) — [音名, 16分音符いくつ分]
+    var MEL = [
+      ['E5',8],['B4',4],['C5',4],['D5',8],['C5',4],['B4',4],
+      ['A4',8],['A4',4],['C5',4],['E5',8],['D5',4],['C5',4],
+      ['B4',12],['C5',4],['D5',8],['E5',8],
+      ['C5',8],['A4',8],['A4',8],[null,8],
+      ['D5',12],['F5',4],['A5',8],['G5',4],['F5',4],
+      ['E5',12],['C5',4],['E5',8],['D5',4],['C5',4],
+      ['B4',8],['B4',4],['C5',4],['D5',8],['E5',8],
+      ['C5',8],['A4',8],['A4',8],[null,8]
+    ];
+    var BASS_ROOTS = ['E2','B1','E2','E2','A1','E2','B1','E2',
+                      'D2','D2','A1','A1','E2','E2','A1','E2'];
+    var CHORDS = [
+      ['E3','G3','B3'], ['B2','D3','F#3'], ['E3','G3','B3'], ['E3','G3','B3'],
+      ['A2','C3','E3'], ['E3','G3','B3'], ['B2','D3','F#3'], ['E3','G3','B3'],
+      ['D3','F3','A3'], ['D3','F3','A3'], ['A2','C3','E3'], ['A2','C3','E3'],
+      ['E3','G3','B3'], ['E3','G3','B3'], ['A2','C3','E3'], ['E3','G3','B3']
+    ];
+    var BASS_OCT = [0, 0, 12, 0, 0, 12, 0, 12];
+
+    var melOn = {}, TOTAL_UNITS = 0;
+    (function () {
+      var u = 0;
+      for (var i = 0; i < MEL.length; i++) {
+        if (MEL[i][0]) melOn[u] = { f: nf(MEL[i][0]), len: MEL[i][1] };
+        u += MEL[i][1];
+      }
+      TOTAL_UNITS = u;   // 256
+    })();
+
+    function init() {
+      if (ac) return;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      try { ac = new AC(); } catch (e) { return; }
+
+      comp = ac.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 14;
+      comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.18;
+      comp.connect(ac.destination);
+
+      master = ac.createGain(); master.gain.value = 1; master.connect(comp);
+      sfxG = ac.createGain(); sfxG.gain.value = 0.4; sfxG.connect(master);
+
+      bgmLP = ac.createBiquadFilter();
+      bgmLP.type = 'lowpass'; bgmLP.frequency.value = 20000; bgmLP.Q.value = 0.7;
+      bgmLP.connect(master);
+      bgmG = ac.createGain(); bgmG.gain.value = 0.3; bgmG.connect(bgmLP);
+
+      delay = ac.createDelay(1.0);
+      delay.delayTime.value = 60 / bpm / 2;
+      delayFb = ac.createGain(); delayFb.gain.value = 0.3;
+      delay.connect(delayFb); delayFb.connect(delay);
+      delayWet = ac.createGain(); delayWet.gain.value = 0.3;
+      delay.connect(delayWet); delayWet.connect(bgmG);
+
+      ready = true;
+    }
+    function resume() { if (ac && ac.state === 'suspended') { try { ac.resume(); } catch (e) {} } }
+
+    function envGain(dest, t0, atk, dec, peak) {
+      var g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0005, peak), t0 + atk);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + atk + dec);
+      g.connect(dest);
+      return g;
+    }
+
+    function tone(dest, freq, dur, type, vol, at, slideTo) {
+      if (!ready || !enabled) return;
+      var t0 = at || ac.currentTime;
+      var o = ac.createOscillator();
+      o.type = type || 'square';
+      o.frequency.setValueAtTime(freq, t0);
+      if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + dur);
+      var g = envGain(dest, t0, 0.008, dur, vol);
+      o.connect(g); o.start(t0); o.stop(t0 + dur + 0.06);
+    }
+    function beep(freq, dur, type, vol, delaySec, slideTo) {
+      if (!ready || !enabled) return;
+      tone(sfxG, freq, dur, type, vol, ac.currentTime + (delaySec || 0), slideTo);
+    }
+
+    function getNoise() {
+      if (noiseBuf) return noiseBuf;
+      var len = Math.floor(ac.sampleRate * 1.2);
+      noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      return noiseBuf;
+    }
+    function noise(dest, dur, vol, f0, f1, at, q, type) {
+      if (!ready || !enabled) return;
+      var t0 = at || ac.currentTime;
+      var s = ac.createBufferSource(); s.buffer = getNoise();
+      s.playbackRate.value = 0.8 + Math.random() * 0.4;
+      var bp = ac.createBiquadFilter();
+      bp.type = type || 'bandpass'; bp.Q.value = q || 1.1;
+      bp.frequency.setValueAtTime(f0, t0);
+      if (f1) bp.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t0 + dur);
+      var g = envGain(dest, t0, 0.005, dur, vol);
+      s.connect(bp); bp.connect(g);
+      s.start(t0); s.stop(t0 + dur + 0.06);
+    }
+
+    // ---- 効果音 ----
+    var sfx = {
+      move:     function () { beep(200, 0.028, 'square', 0.22); },
+      wall:     function () { beep(90, 0.05, 'square', 0.18); },
+      soft:     function () { beep(150, 0.02, 'square', 0.12); },
+      hardDrop: function () {
+        if (!ready || !enabled) return;
+        noise(sfxG, 0.13, 0.5, 1600, 140, ac.currentTime);
+        beep(180, 0.09, 'triangle', 0.5, 0, 55);
+      },
+      lock:     function () { beep(170, 0.05, 'triangle', 0.32); },
+      hold:     function () { beep(500, 0.07, 'sine', 0.4, 0, 760); },
+      line:     function (n) {
+        var seq = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+        for (var i = 0; i < Math.min(n + 2, 5); i++) beep(seq[i], 0.14, 'square', 0.4, i * 0.05);
+      },
+      perfect:  function () {
+        var seq = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98];
+        for (var i = 0; i < seq.length; i++) beep(seq[i], 0.22, 'square', 0.4, i * 0.07);
+      },
+      levelUp:  function () {
+        var seq = [440, 554.37, 659.25, 880];
+        for (var i = 0; i < seq.length; i++) beep(seq[i], 0.13, 'square', 0.36, i * 0.06);
+      },
+      gameOver: function () {
+        var seq = [440, 392, 349.23, 293.66, 220];
+        for (var i = 0; i < seq.length; i++) beep(seq[i], 0.3, 'sawtooth', 0.34, i * 0.15);
+      },
+      start:    function () {
+        var seq = [392, 523.25, 659.25, 783.99];
+        for (var i = 0; i < seq.length; i++) beep(seq[i], 0.12, 'square', 0.35, i * 0.06);
+      },
+      explosion: function () {
+        if (!ready || !enabled) return;
+        var t = ac.currentTime;
+        noise(sfxG, 0.7, 0.95, 900, 60, t, 0.5, 'lowpass');
+        noise(sfxG, 0.25, 0.6, 4000, 500, t, 0.8);
+        tone(sfxG, 110, 0.5, 'sawtooth', 0.7, t, 28);
+        tone(sfxG, 60, 0.7, 'sine', 0.9, t, 22);
+      },
+      match: function (chainN) {
+        var base = 523.25 * Math.pow(2, Math.min(chainN, 10) / 12);
+        for (var i = 0; i < 3; i++) beep(base * Math.pow(2, i * 4 / 12), 0.1, 'square', 0.36, i * 0.04);
+      },
+      alarm: function () {
+        for (var i = 0; i < 3; i++) {
+          beep(880, 0.11, 'square', 0.35, i * 0.16);
+          beep(660, 0.11, 'square', 0.35, i * 0.16 + 0.08);
+        }
+      },
+      power: function () {
+        if (!ready || !enabled) return;
+        tone(sfxG, 800, 0.9, 'sawtooth', 0.4, ac.currentTime, 40);
+        noise(sfxG, 0.5, 0.35, 3000, 80, ac.currentTime, 0.6);
+      },
+      garbage: function () {
+        if (!ready || !enabled) return;
+        noise(sfxG, 0.45, 0.6, 300, 90, ac.currentTime, 0.7, 'lowpass');
+        tone(sfxG, 90, 0.3, 'square', 0.4, ac.currentTime, 55);
+      },
+      shuffle: function () {
+        if (!ready || !enabled) return;
+        for (var i = 0; i < 6; i++) {
+          beep(300 + Math.random() * 900, 0.07, 'square', 0.28, i * 0.05);
+        }
+        noise(sfxG, 0.4, 0.35, 900, 3500, ac.currentTime, 0.8);
+      },
+      double: function () {
+        var seq = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5, 1318.5];
+        for (var i = 0; i < seq.length; i++) beep(seq[i], 0.12, 'square', 0.38, i * 0.055);
+      },
+      guillotine: function () {
+        if (!ready || !enabled) return;
+        noise(sfxG, 0.22, 0.6, 7000, 900, ac.currentTime, 2.4, 'highpass');
+        tone(sfxG, 900, 0.18, 'sawtooth', 0.35, ac.currentTime, 120);
+        noise(sfxG, 0.4, 0.5, 300, 70, ac.currentTime + 0.18, 0.7, 'lowpass');
+      },
+      rainbow: function () {
+        if (!ready || !enabled) return;
+        var seq = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98, 2093];
+        for (var i = 0; i < seq.length; i++) beep(seq[i], 0.16, 'triangle', 0.4, i * 0.045);
+        noise(sfxG, 0.5, 0.3, 600, 6000, ac.currentTime, 0.6);
+      },
+      colorBomb: function () {
+        var seq = [392, 523.25, 659.25, 880, 1174.66];
+        for (var i = 0; i < seq.length; i++) beep(seq[i], 0.13, 'triangle', 0.4, i * 0.05);
+        beep(200, 0.34, 'sine', 0.5, 0, 900);
+      },
+      virus: function () {
+        if (!ready || !enabled) return;
+        tone(sfxG, 160, 0.6, 'sawtooth', 0.45, ac.currentTime, 70);
+        noise(sfxG, 0.55, 0.3, 500, 160, ac.currentTime, 0.6, 'lowpass');
+      },
+      virusSpread: function () {
+        beep(240, 0.1, 'sawtooth', 0.2, 0, 150);
+      },
+      parasite: function () {
+        beep(1200, 0.06, 'sawtooth', 0.25, 0, 500);
+        beep(900, 0.06, 'sawtooth', 0.25, 0.06, 380);
+      },
+      paraDead: function () {
+        beep(300, 0.18, 'sawtooth', 0.4, 0, 60);
+        beep(1400, 0.08, 'square', 0.3, 0.02, 200);
+      }
+    };
+
+    // ---- BGM 音色 ----
+    function lead(f, dur, at) {
+      var g = ac.createGain();
+      var peak = 0.5;
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(peak, at + 0.012);
+      g.gain.setValueAtTime(peak, at + dur * 0.55);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      g.connect(bgmG); g.connect(delay);
+
+      var o1 = ac.createOscillator(); o1.type = 'square'; o1.frequency.value = f; o1.detune.value = -8;
+      var o2 = ac.createOscillator(); o2.type = 'square'; o2.frequency.value = f; o2.detune.value = 8;
+      var o3 = ac.createOscillator(); o3.type = 'triangle'; o3.frequency.value = f * 2;
+      var g3 = ac.createGain(); g3.gain.value = 0.35;
+      o1.connect(g); o2.connect(g); o3.connect(g3); g3.connect(g);
+      o1.start(at); o2.start(at); o3.start(at);
+      o1.stop(at + dur + 0.05); o2.stop(at + dur + 0.05); o3.stop(at + dur + 0.05);
+    }
+
+    function bassNote(f, dur, at) {
+      var o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
+      var sub = ac.createOscillator(); sub.type = 'square'; sub.frequency.value = f / 2;
+      var subG = ac.createGain(); subG.gain.value = 0.5;
+      var lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 7;
+      lp.frequency.setValueAtTime(1800, at);
+      lp.frequency.exponentialRampToValueAtTime(220, at + dur * 0.85);
+      var g = envGain(bgmG, at, 0.006, dur, 0.75);
+      o.connect(lp); sub.connect(subG); subG.connect(lp); lp.connect(g);
+      o.start(at); sub.start(at);
+      o.stop(at + dur + 0.05); sub.stop(at + dur + 0.05);
+    }
+
+    function arpNote(f, dur, at) {
+      var o = ac.createOscillator(); o.type = 'square'; o.frequency.value = f;
+      var g = envGain(bgmG, at, 0.004, dur, 0.2);
+      o.connect(g); o.start(at); o.stop(at + dur + 0.04);
+    }
+
+    function kick(at, hard) {
+      var o = ac.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(hard ? 210 : 170, at);
+      o.frequency.exponentialRampToValueAtTime(42, at + 0.09);
+      var g = envGain(bgmG, at, 0.003, 0.16, hard ? 1.3 : 1.0);
+      o.connect(g); o.start(at); o.stop(at + 0.25);
+      noise(bgmG, 0.012, 0.35, 2200, 800, at, 1.2);
+    }
+    function snare(at) {
+      noise(bgmG, 0.14, 0.55, 1900, 900, at, 0.9);
+      noise(bgmG, 0.05, 0.3, 320, 200, at, 1.4);
+      var o = ac.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(190, at);
+      var g = envGain(bgmG, at, 0.003, 0.07, 0.35);
+      o.connect(g); o.start(at); o.stop(at + 0.12);
+    }
+    function hat(at, accent) {
+      noise(bgmG, accent ? 0.035 : 0.022, accent ? 0.3 : 0.16, 9000, 11000, at, 1.5, 'highpass');
+    }
+    function crash(at) {
+      noise(bgmG, 0.9, 0.42, 5000, 2500, at, 0.5, 'highpass');
+    }
+
+    function scheduler() {
+      if (!playing || !ready || !enabled) return;
+      var unit = 60 / bpm / 4;              // 16分音符
+      var horizon = ac.currentTime + 0.25;
+      var guard = 0;
+      while (nextTime < horizon && guard++ < 64) {
+        var u = stepIdx % TOTAL_UNITS;
+        var bar = Math.floor(u / 16) % 16;
+        var b = u % 16;
+
+        var m = melOn[u];
+        if (m) lead(m.f, unit * m.len * 0.92, nextTime);
+
+        if (b % 2 === 0) {
+          var root = nf(BASS_ROOTS[bar]);
+          var oct = BASS_OCT[(b / 2) | 0];
+          bassNote(root * Math.pow(2, oct / 12), unit * 1.7, nextTime);
+          hat(nextTime, b % 4 === 0);
+        } else {
+          var ch = CHORDS[bar];
+          arpNote(nf(ch[(((b - 1) / 2) | 0) % 3]) * 2, unit * 0.85, nextTime);
+        }
+
+        if (b === 0 || b === 6 || b === 8) kick(nextTime, b === 0);
+        if (b === 4 || b === 12) snare(nextTime);
+        if (u === 0 || u === 128) crash(nextTime);
+
+        nextTime += unit;
+        stepIdx++;
+      }
+    }
+
+    // ---- BGM本体 (MP3ファイル。読めない場合は上の合成BGMにフォールバック) ----
+    var bgmEl = null;
+    function useFile(url) {
+      try {
+        bgmEl = new Audio(url);
+        bgmEl.loop = true;
+        bgmEl.volume = 0.45;
+        try { bgmEl.preservesPitch = false; } catch (e) {}
+        try { bgmEl.mozPreservesPitch = false; } catch (e) {}
+        bgmEl.addEventListener('error', function () { bgmEl = null; });
+        bgmEl.load();
+      } catch (e) { bgmEl = null; }
+    }
+
+    function synthStart(fromTop) {
+      if (!ready || !enabled || playing) return;
+      if (fromTop) stepIdx = 0;
+      playing = true;
+      nextTime = ac.currentTime + 0.08;
+      clearInterval(timer);
+      timer = setInterval(scheduler, 25);
+      scheduler();
+    }
+    function bgmStart(fromTop) {
+      if (!enabled) return;
+      if (bgmEl) {
+        if (fromTop) { try { bgmEl.currentTime = 0; } catch (e) {} }
+        var el = bgmEl;
+        var pr = el.play();
+        if (pr && pr['catch']) pr['catch'](function () { bgmEl = null; synthStart(true); });
+        // file:// 等で再生が始まらない場合は合成BGMに切り替える
+        if (fromTop) {
+          var t0 = el.currentTime;
+          setTimeout(function () {
+            if (bgmEl !== el || !enabled) return;
+            if (el.paused || el.currentTime <= t0) {
+              try { el.pause(); } catch (e) {}
+              bgmEl = null;
+              synthStart(true);
+            }
+          }, 1400);
+        }
+        return;
+      }
+      synthStart(fromTop);
+    }
+    function bgmStop() {
+      if (bgmEl) { try { bgmEl.pause(); } catch (e) {} }
+      playing = false;
+      clearInterval(timer); timer = null;
+    }
+
+    return {
+      init: init,
+      resume: resume,
+      sfx: sfx,
+      bgmStart: bgmStart,
+      bgmStop: bgmStop,
+      useFile: useFile,
+      duck: function (v) { if (bgmEl) bgmEl.volume = 0.45 * v; },
+      setTempo: function (b) {
+        bpm = Math.max(120, Math.min(280, b));
+        if (delay) {
+          try { delay.delayTime.setTargetAtTime(60 / bpm / 2, ac.currentTime, 0.05); }
+          catch (e) { delay.delayTime.value = 60 / bpm / 2; }
+        }
+        if (bgmEl) bgmEl.playbackRate = Math.max(1, Math.min(1.45, bpm / 172));
+      },
+      setFilter: function (freq, sec) {
+        if (!ready || !bgmLP) return;
+        try { bgmLP.frequency.setTargetAtTime(freq, ac.currentTime, sec || 0.15); }
+        catch (e) { bgmLP.frequency.value = freq; }
+      },
+      isEnabled: function () { return enabled; },
+      setEnabled: function (v) {
+        enabled = !!v;
+        if (!enabled) { bgmStop(); if (master) master.gain.value = 0; }
+        else if (master) master.gain.value = 1;
+      }
+    };
+  })();
+
+  // =====================================================================
+  //  DOM
+  // =====================================================================
+  var boardCv = document.getElementById('board');
+  var bctx = boardCv.getContext('2d');
+  var nextCv = document.getElementById('next');
+  var nctx = nextCv.getContext('2d');
+  var holdCv = document.getElementById('hold');
+  var hctx = holdCv.getContext('2d');
+  var overlay = document.getElementById('overlay');
+  var ovTitle = document.getElementById('ovTitle');
+  var ovSub = document.getElementById('ovSub');
+  var toastEl = document.getElementById('toast');
+  var toastMain = toastEl.querySelector('.t-main');
+  var toastSub = toastEl.querySelector('.t-sub');
+  var titleEl = document.getElementById('title');
+  var titleBest = document.getElementById('titleBest');
+  var startBtn = document.getElementById('startBtn');
+  var startHint = document.getElementById('startHint');
+  var ovButtons = document.getElementById('ovButtons');
+  var retryBtn = document.getElementById('retryBtn');
+  var titleBtn = document.getElementById('titleBtn');
+  var soundBtn = document.getElementById('soundBtn');
+  var padEl = document.getElementById('pad');
+  var holdH2 = document.querySelector('.hold-card h2');
+  var holdPadBtn = document.querySelector('.pbtn[data-act="hold"]');
+  var panelPieces = document.querySelector('.panel-pieces');
+  var panelStats = document.querySelector('.panel-stats');
+  var el = {
+    score: document.getElementById('score'),
+    lines: document.getElementById('lines'),
+    level: document.getElementById('level'),
+    combo: document.getElementById('combo'),
+    best: document.getElementById('best')
+  };
+
+  var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  if (isTouch) {
+    document.body.classList.add('touch');
+    startHint.innerHTML =
+      '同じ色を <b>縦・横・斜めに3つ以上</b> そろえると消える<br>' +
+      'ボタン・スワイプ・タップで操作';
+  }
+
+  // =====================================================================
+  //  状態
+  // =====================================================================
+  var grid, queue, current, holdItem, canHold;
+  var score, cleared, level, best, newBest;
+  var dropTimer, lockTimer;
+  var state = 'ready';                    // ready | playing | paused | over
+  var lastTime = 0, toastTimer = null;
+  var particles = [], shocks = [];
+  var shakeT = 0, shakeDur = 1, shakeMag = 0;
+  var anim = null;                        // 進行中の演出 {kind,t,dur,data,end}
+  var chain = 0, combo = -1, didClear = false, blocksAtLock = 0, shownColors = 0;
+  var eventClock = 0, eventCooldown = 0, eventPending = false, meteorPending = false;
+  var headsPending = false, shufflePending = false, doubleTimer = 0;
+  var paraCooldown = { recolor: 0, garbage: 0 };
+  var virusTimer = 0, virusWarned = false;
+  var blackout = 0, blackoutTotal = 0;
+  var nextCount = 5, nextHoriz = false, miniCell = 26, isMobile = false;
+  var animPhase = 0;
+
+  var CLEAR_FLASH = 150, CLEAR_SQUEEZE = 180;
+  var CLEAR_TOTAL = CLEAR_FLASH + CLEAR_SQUEEZE;
+
+  try { best = parseInt(localStorage.getItem('colorix.best') || '0', 10) || 0; }
+  catch (e) { best = 0; }
+
+  var soundOn = true;
+  try { soundOn = localStorage.getItem('tetris.sound') !== 'off'; } catch (e) {}
+
+  // =====================================================================
+  //  レイアウト
+  // =====================================================================
+  function setCanvas(cv, w, h) {
+    var dpr = window.devicePixelRatio || 1;
+    cv.width = Math.max(1, Math.round(w * dpr));
+    cv.height = Math.max(1, Math.round(h * dpr));
+    cv.style.width = w + 'px';
+    cv.style.height = h + 'px';
+    cv.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+    cv._w = w; cv._h = h;
+  }
+
+  function layout() {
+    var vw = window.innerWidth, vh = window.innerHeight;
+    isMobile = vw < 760;
+    nextCount = 5;
+    nextHoriz = isMobile;
+
+    if (isMobile) {
+      miniCell = vw >= 400 ? 17 : 14;
+      var slotW = miniCell + 7;
+      setCanvas(nextCv, slotW * nextCount, miniCell + 7);
+      setCanvas(holdCv, miniCell + 12, miniCell + 7);
+    } else {
+      miniCell = (vh < 760) ? 22 : 28;
+      var slot = miniCell + 14;
+      setCanvas(nextCv, 110, nextCount * slot);
+      setCanvas(holdCv, 110, slot);
+    }
+
+    var availW, availH;
+    if (isMobile) {
+      var chromeH = panelPieces.offsetHeight + panelStats.offsetHeight + padEl.offsetHeight;
+      availW = vw - 16;
+      availH = vh - chromeH - 40;
+    } else {
+      availW = vw - 410;
+      availH = vh - 40;
+    }
+
+    var cell = Math.floor(Math.min(availW / COLS, availH / ROWS));
+    CELL = Math.max(9, Math.min(cell, CELL_MAX));
+    setCanvas(boardCv, COLS * CELL, ROWS * CELL);
+  }
+
+  window.addEventListener('resize', layout);
+  window.addEventListener('orientationchange', function () { setTimeout(layout, 250); });
+
+  // =====================================================================
+  //  グリッド
+  // =====================================================================
+  function mkCell(t, bomb, cbomb, rbomb) {
+    return { t: t, bomb: !!bomb, cbomb: !!cbomb, rbomb: !!rbomb, para: null, virus: false };
+  }
+
+  function emptyGrid() {
+    var g = [];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      var row = [];
+      for (var x = 0; x < COLS; x++) row.push(null);
+      g.push(row);
+    }
+    return g;
+  }
+
+  function inField(x, y) {
+    return x >= 0 && x < COLS && y >= 0 && y < TOTAL_ROWS;
+  }
+  function isColor(c) {
+    return !!c && c.t !== 'G' && c.t !== '*' && c.t !== '%' && c.t !== '#';
+  }
+
+  // いまの色数の中から、t 以外の色をひとつ選ぶ
+  function otherColor(t) {
+    var keys = COLOR_KEYS.slice(0, colorCount());
+    if (keys.length < 2) return keys[0];
+    var k;
+    do { k = keys[Math.floor(Math.random() * keys.length)]; } while (k === t);
+    return k;
+  }
+
+  function randColor() {
+    var n = colorCount();
+    return COLOR_KEYS[Math.floor(Math.random() * n)];
+  }
+
+  // NEXT に積む1個分
+  function makeItem() {
+    var r = Math.random(), p = 0;
+    if (score >= BOMB_SCORE) {
+      p += BOMB_CHANCE;
+      if (r < p) return { t: '*', bomb: true, cbomb: false, rbomb: false, para: false };
+    }
+    if (score >= RBOMB_SCORE) {
+      p += RBOMB_CHANCE;
+      if (r < p) return { t: '#', bomb: false, cbomb: false, rbomb: true, para: false };
+    }
+    if (score >= CBOMB_SCORE) {
+      p += CBOMB_CHANCE;
+      if (r < p) return { t: '%', bomb: false, cbomb: true, rbomb: false, para: false };
+    }
+    if (score >= GARBAGE_SCORE) {
+      p += GARBAGE_CHANCE;
+      if (r < p) return { t: 'G', bomb: false, cbomb: false, rbomb: false, para: false };
+    }
+    // 寄生虫が付くかどうかは出現時 (newPiece) に判定する
+    return { t: randColor(), bomb: false, cbomb: false, rbomb: false, para: false, paraType: null };
+  }
+
+  function freeAt(x, y) {
+    if (x < 0 || x >= COLS || y >= TOTAL_ROWS) return false;
+    if (y < 0) return true;
+    return !grid[y][x];
+  }
+
+  function newPiece(item) {
+    if (state === 'over') return;
+    // 一番上の行が埋まっていたら終了
+    if (grid[0][SPAWN_X]) { gameOver(); return; }
+    if (!item) item = queue.shift();
+    // 色ブロックのときだけ、空きがあれば寄生虫が付く
+    var pt = null;
+    if (!item.bomb && !item.cbomb && !item.rbomb && item.t !== 'G' &&
+        Math.random() < PARA_CHANCE) {
+      pt = freeParaType();
+    }
+    current = { t: item.t, bomb: !!item.bomb, cbomb: !!item.cbomb, rbomb: !!item.rbomb,
+                para: !!pt, paraType: pt, x: SPAWN_X, y: 0 };
+    while (queue.length < 6) queue.push(makeItem());
+    dropTimer = 0; lockTimer = null;
+  }
+
+  function reset() {
+    grid = emptyGrid();
+    queue = [];
+    holdItem = null; canHold = true;
+    score = 0; cleared = 0; level = 1; newBest = false;
+    dropTimer = 0; lockTimer = null;
+    chain = 0; combo = -1; shownColors = 0;
+    anim = null; particles = []; shocks = [];
+    shakeT = 0; shakeMag = 0; shakeDur = 1;
+    blackout = 0; blackoutTotal = 0;
+    eventClock = 0; eventCooldown = EVENT_COOLDOWN;
+    eventPending = false; meteorPending = false;
+    headsPending = false; shufflePending = false; doubleTimer = 0;
+    paraCooldown = { recolor: 0, garbage: 0 };
+    virusTimer = 0; virusWarned = false;
+    Snd.setTempo(172);
+    Snd.setFilter(20000, 0.01);
+    for (var i = 0; i < 6; i++) queue.push(makeItem());
+    current = null;
+    newPiece(queue.shift());
+    updateHUD();
+  }
+
+  function gravityInterval() {
+    var base = Math.pow(0.86 - (level - 1) * 0.005, level - 1) * 750;
+    return Math.max(50, base / speedMul());
+  }
+
+  function move(dx, dy) {
+    if (!current) return false;
+    if (!freeAt(current.x + dx, current.y + dy)) return false;
+    current.x += dx; current.y += dy;
+    if (dy > 0) lockTimer = null;
+    return true;
+  }
+
+  function ghostY() {
+    var y = current.y;
+    while (freeAt(current.x, y + 1)) y++;
+    return y;
+  }
+
+  // =====================================================================
+  //  操作
+  // =====================================================================
+  function hardDrop() {
+    var target = ghostY();
+    var dist = target - current.y;
+    score += dist * 2;
+    current.y = target;
+    Snd.sfx.hardDrop();
+    spawnDustAt(current.x, current.y);
+    addShake(Math.min(6, 1.5 + dist * 0.2), 110);
+    lock();
+  }
+
+  function hold() {
+    if (!holdUnlocked()) {
+      Snd.sfx.wall();
+      showToast('HOLD は ' + HOLD_SCORE + ' 点で解放', '', false);
+      return;
+    }
+    if (!canHold || !current) return;
+    var stored = holdItem;
+    holdItem = { t: current.t, bomb: current.bomb, cbomb: current.cbomb,
+                 rbomb: current.rbomb, para: current.para, paraType: current.paraType };
+    canHold = false;
+    Snd.sfx.hold();
+    current = null;
+    newPiece(stored || queue.shift());
+  }
+
+  function lock() {
+    if (!current) return;
+    var c = mkCell(current.t, current.bomb, current.cbomb, current.rbomb);
+    if (current.para && current.paraType &&
+        paraCountTotal() < paraTotalMax() &&
+        paraCountOf(current.paraType) < paraPerTypeMax() &&
+        paraCooldown[current.paraType] <= 0) {
+      c.para = mkPara(current.paraType);
+      Snd.sfx.parasite();
+    }
+    if (current.y >= 0) grid[current.y][current.x] = c;
+    var wasBomb = current.bomb;
+    current = null;
+    chain = 0; didClear = false;
+    blocksAtLock = countBlocks();
+    if (!wasBomb) {
+      if (c.t === 'G') Snd.sfx.garbage(); else Snd.sfx.lock();
+    }
+    beginResolve(false);
+  }
+
+  // =====================================================================
+  //  消去解決パイプライン (爆弾 -> ライン -> 同色そろい -> 連鎖)
+  // =====================================================================
+  function setAnim(kind, dur, data, end) {
+    anim = { kind: kind, t: 0, dur: dur, data: data || null, end: end };
+  }
+
+  function findBombs() {
+    var out = [];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        if (grid[y][x] && grid[y][x].bomb) out.push([x, y]);
+      }
+    }
+    return out;
+  }
+
+  function findRainbowBombs() {
+    var out = [];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        if (grid[y][x] && grid[y][x].rbomb) out.push([x, y]);
+      }
+    }
+    return out;
+  }
+
+  // 盤面でいちばん多い色
+  function dominantColor() {
+    var cnt = {}, best = null, bestN = 0;
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        var c = grid[y][x];
+        if (!isColor(c)) continue;
+        cnt[c.t] = (cnt[c.t] || 0) + 1;
+        if (cnt[c.t] > bestN) { bestN = cnt[c.t]; best = c.t; }
+      }
+    }
+    return best;
+  }
+
+  // レインボー爆弾: 真下のブロックの色 (なければ最多色) を盤面から全部消す
+  function rainbowTargets(centers) {
+    var want = {}, i, x, y;
+    for (i = 0; i < centers.length; i++) {
+      var bx = centers[i][0], by = centers[i][1], t = null;
+      if (inField(bx, by + 1) && isColor(grid[by + 1][bx])) t = grid[by + 1][bx].t;
+      if (!t) t = dominantColor();
+      if (t) want[t] = 1;
+    }
+    var out = [], seen = {};
+    for (y = 0; y < TOTAL_ROWS; y++) {
+      for (x = 0; x < COLS; x++) {
+        if (isColor(grid[y][x]) && want[grid[y][x].t]) {
+          out.push([x, y]); seen[x + ',' + y] = 1;
+        }
+      }
+    }
+    for (i = 0; i < centers.length; i++) {
+      var k = centers[i][0] + ',' + centers[i][1];
+      if (!seen[k]) { out.push(centers[i]); seen[k] = 1; }
+    }
+    var list = [];
+    for (var kk in want) if (Object.prototype.hasOwnProperty.call(want, kk)) list.push(kk);
+    return { cells: out, colors: list };
+  }
+
+  function findColorBombs() {
+    var out = [];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        if (grid[y][x] && grid[y][x].cbomb) out.push([x, y]);
+      }
+    }
+    return out;
+  }
+
+  // カラー爆弾の効果範囲。おじゃまブロックも普通の色ブロックに戻せる。
+  function recolorTargets(centers) {
+    var seen = {}, out = [];
+    for (var i = 0; i < centers.length; i++) {
+      var bx = centers[i][0], by = centers[i][1];
+      for (var dy = -CBOMB_RADIUS; dy <= CBOMB_RADIUS; dy++) {
+        for (var dx = -CBOMB_RADIUS; dx <= CBOMB_RADIUS; dx++) {
+          var x = bx + dx, y = by + dy;
+          if (!inField(x, y)) continue;
+          var c = grid[y][x];
+          if (!c || c.bomb) continue;
+          var k = x + ',' + y;
+          if (seen[k]) continue;
+          seen[k] = 1; out.push([x, y]);
+        }
+      }
+    }
+    return out;
+  }
+
+  function applyRecolor(list) {
+    for (var i = 0; i < list.length; i++) {
+      var c = grid[list[i][1]][list[i][0]];
+      if (!c) continue;
+      c.cbomb = false;
+      c.t = randColor();
+    }
+  }
+
+  function blastCells(centers) {
+    var seen = {}, out = [];
+    for (var i = 0; i < centers.length; i++) {
+      var bx = centers[i][0], by = centers[i][1];
+      for (var dy = -BOMB_RADIUS; dy <= BOMB_RADIUS; dy++) {
+        for (var dx = -BOMB_RADIUS; dx <= BOMB_RADIUS; dx++) {
+          var x = bx + dx, y = by + dy;
+          if (!inField(x, y) || !grid[y][x]) continue;
+          var k = x + ',' + y;
+          if (seen[k]) continue;
+          seen[k] = 1; out.push([x, y]);
+        }
+      }
+    }
+    return out;
+  }
+
+  // 同色が縦・横・斜めに MATCH_MIN 個以上そろっているか
+  function findMatches() {
+    var mark = {}, out = [];
+    var dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        var c = grid[y][x];
+        if (!isColor(c)) continue;
+        for (var d = 0; d < dirs.length; d++) {
+          var dx = dirs[d][0], dy = dirs[d][1];
+          var px = x - dx, py = y - dy;
+          // 並びの先頭だけを起点にする
+          if (inField(px, py) && grid[py][px] && grid[py][px].t === c.t) continue;
+          var run = [[x, y]];
+          var nx = x + dx, ny = y + dy;
+          while (inField(nx, ny) && grid[ny][nx] && grid[ny][nx].t === c.t) {
+            run.push([nx, ny]);
+            nx += dx; ny += dy;
+          }
+          if (run.length >= MATCH_MIN) {
+            for (var r = 0; r < run.length; r++) {
+              var k = run[r][0] + ',' + run[r][1];
+              if (!mark[k]) { mark[k] = 1; out.push(run[r]); }
+            }
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  function applyGravity() {
+    for (var x = 0; x < COLS; x++) {
+      var col = [], y;
+      for (y = TOTAL_ROWS - 1; y >= 0; y--) if (grid[y][x]) col.push(grid[y][x]);
+      var yy = TOTAL_ROWS - 1;
+      for (var i = 0; i < col.length; i++) { grid[yy][x] = col[i]; yy--; }
+      for (; yy >= 0; yy--) grid[yy][x] = null;
+    }
+  }
+
+  function removeCells(list) {
+    var killed = [];
+    for (var i = 0; i < list.length; i++) {
+      var c = grid[list[i][1]][list[i][0]];
+      if (!c) continue;
+      if (c.para) killed.push(c.para.type);
+      grid[list[i][1]][list[i][0]] = null;
+    }
+    return killed;
+  }
+
+  function removeRows(rows) {
+    var killed = 0, i, x;
+    for (i = 0; i < rows.length; i++) {
+      for (x = 0; x < COLS; x++) {
+        var c = grid[rows[i]][x];
+        if (c && c.para) killed++;
+      }
+    }
+    for (i = 0; i < rows.length; i++) {
+      grid.splice(rows[i], 1);
+      var row = [];
+      for (x = 0; x < COLS; x++) row.push(null);
+      grid.unshift(row);
+    }
+    return killed;
+  }
+
+  function paraBonus(killed) {
+    if (!killed || !killed.length) return;
+    for (var i = 0; i < killed.length; i++) {
+      // 撃退したタイプは一定時間 (ランダム) 復活しない
+      paraCooldown[killed[i]] = PARA_RESPAWN_MIN +
+        Math.random() * (PARA_RESPAWN_MAX - PARA_RESPAWN_MIN);
+    }
+    var gain = applyScore(300 * killed.length * level);
+    Snd.sfx.paraDead();
+    showToast(paraName(killed[0]) + ' 撃退！', '+' + gain, true);
+  }
+
+  function addCleared(n) {
+    cleared += n;
+    var newLevel = Math.floor(cleared / LEVEL_PER) + 1;
+    if (newLevel > level) {
+      level = newLevel;
+      Snd.setTempo(172 + (level - 1) * 6);
+      Snd.sfx.levelUp();
+      setTimeout(function () {
+        if (state === 'playing') showToast('LEVEL ' + level, 'SPEED UP!', false);
+      }, 900);
+    }
+  }
+
+  function beginResolve(afterEvent) {
+    if (state === 'over') return;
+
+    // --- 1. 爆弾 ---
+    var bombs = findBombs();
+    if (bombs.length) {
+      var i;
+      for (i = 0; i < bombs.length; i++) grid[bombs[i][1]][bombs[i][0]].bomb = false;
+      var cells = blastCells(bombs);
+      didClear = true;
+      Snd.sfx.explosion();
+      addShake(18, 460);
+      spawnExplosion(bombs, cells);
+      setAnim('explode', 440, { cells: cells, centers: bombs }, function () {
+        var killed = removeCells(cells);
+        applyGravity();
+        var mul = bonusMul(cells.length);
+        var gain = applyScore(cells.length * 30 * level * mul);
+        addCleared(cells.length);
+        showToast('BOMB!!', '+' + gain + mulLabel(mul), true);
+        paraBonus(killed);
+        updateHUD();
+        beginResolve(afterEvent);
+      });
+      return;
+    }
+
+    // --- 1.3 レインボー爆弾 (指定色を盤面から全部消す) ---
+    var rbs = findRainbowBombs();
+    if (rbs.length) {
+      var rt = rainbowTargets(rbs);
+      for (var ri = 0; ri < rbs.length; ri++) grid[rbs[ri][1]][rbs[ri][0]].rbomb = false;
+      didClear = true;
+      Snd.sfx.rainbow();
+      addShake(12, 400);
+      spawnRainbowBurst(rt.cells, rt.colors);
+      setAnim('rainbow', 460, { cells: rt.cells, colors: rt.colors }, function () {
+        var killedR = removeCells(rt.cells);
+        applyGravity();
+        var mulR = bonusMul(rt.cells.length);
+        var gainR = applyScore(rt.cells.length * 60 * level * mulR);
+        addCleared(rt.cells.length);
+        showToast('RAINBOW!!', '+' + gainR + mulLabel(mulR), true);
+        paraBonus(killedR);
+        updateBest();
+        updateHUD();
+        beginResolve(afterEvent);
+      });
+      return;
+    }
+
+    // --- 1.5 カラー爆弾 (3x3をランダムな色に塗り替える) ---
+    var cbs = findColorBombs();
+    if (cbs.length) {
+      var targets = recolorTargets(cbs);
+      var freed = 0;
+      for (var ci = 0; ci < targets.length; ci++) {
+        var tc = grid[targets[ci][1]][targets[ci][0]];
+        if (tc && tc.t === 'G') freed++;
+      }
+      Snd.sfx.colorBomb();
+      addShake(6, 240);
+      spawnRecolorBurst(targets);
+      setAnim('recolor', 340, { cells: targets, centers: cbs }, function () {
+        applyRecolor(targets);
+        var gain = applyScore(freed * 150 * level);
+        showToast('COLOR BOMB!', targets.length + ' ブロックを塗り替え' +
+                  (freed ? '  おじゃま' + freed + '個を解放 +' + gain : ''), true);
+        updateBest();
+        updateHUD();
+        beginResolve(afterEvent);
+      });
+      return;
+    }
+
+    // --- 2. 同色そろい ---
+    //  (横一列そろっても、色が違えば消えない)
+    var m = findMatches();
+    if (m.length) {
+      chain++;
+      var ch = chain;
+      var mul = bonusMul(m.length);
+      var gain = applyScore(60 * m.length * ch * level * mul);
+      addCleared(m.length);
+      didClear = true;
+      Snd.sfx.match(ch);
+      addShake(3 + ch * 2, 200);
+      spawnMatchBurst(m);
+      var head = ch > 1 ? ch + ' CHAIN!' : m.length + ' MATCH!';
+      if (combo > 0) head += '  ' + (combo + 1) + ' COMBO';
+      showToast(head, '+' + gain + mulLabel(mul), ch > 1 || combo > 0);
+      updateBest();
+      updateHUD();
+      setAnim('match', 300, { cells: m }, function () {
+        var killed = removeCells(m);
+        applyGravity();
+        paraBonus(killed);
+        updateHUD();
+        beginResolve(afterEvent);
+      });
+      return;
+    }
+
+    // --- 3. 全消し判定 ---
+    // ほどほどに積んだ状態から消しきったときだけボーナス
+    if (didClear && blocksAtLock >= ALL_CLEAR_MIN && isEmptyBoard()) {
+      didClear = false;
+      var pcGain = applyScore(3000 + 800 * level);
+      Snd.sfx.perfect();
+      showToast('ALL CLEAR!!', '+' + pcGain, true);
+      updateBest();
+      updateHUD();
+    }
+
+    finishResolve(afterEvent);
+  }
+
+  function countBlocks() {
+    var n = 0;
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) if (grid[y][x]) n++;
+    }
+    return n;
+  }
+
+  function isEmptyBoard() {
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) if (grid[y][x]) return false;
+    }
+    return true;
+  }
+
+  function finishResolve(afterEvent) {
+    if (state === 'over') return;
+    if (!afterEvent) {
+      // 連続消しの記録を更新
+      if (didClear) combo++; else combo = -1;
+      updateHUD();
+      if (meteorPending) { meteorPending = false; startMeteor(); return; }
+      if (headsPending) { headsPending = false; startHeadsman(); return; }
+      if (shufflePending) { shufflePending = false; startShuffle(); return; }
+      if (eventPending) { triggerEvent(); return; }
+    }
+    nextTurn();
+  }
+
+  function nextTurn() {
+    if (state === 'over') return;
+    canHold = true;
+    newPiece(queue.shift());
+  }
+
+  function updateBest() {
+    if (score > best) {
+      best = score;
+      newBest = true;
+      try { localStorage.setItem('colorix.best', String(best)); } catch (e) {}
+    }
+  }
+
+  // =====================================================================
+  //  CHAOS イベント
+  // =====================================================================
+  function showEvent(main, sub) {
+    toastMain.textContent = main;
+    toastSub.textContent = sub || '';
+    toastEl.classList.remove('big');
+    toastEl.classList.add('event', 'show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toastEl.classList.remove('show', 'event');
+    }, 1500);
+  }
+
+  function triggerEvent() {
+    eventPending = false;
+    eventCooldown = EVENT_COOLDOWN;
+    eventClock = 0;
+    chain = 0; didClear = false;
+    var pool = mayhem()
+      ? ['rain', 'rain', 'rain', 'blackout', 'blackout', 'parasite', 'parasite']
+      : ['rain', 'rain', 'blackout', 'parasite'];
+    var pick = pool[Math.floor(Math.random() * pool.length)];
+    if (pick === 'rain') startRain();
+    else if (pick === 'blackout') startBlackout();
+    else startParasite();
+  }
+
+  // --- ランダムブロック落下 (おじゃまブロックもここで降ってくる) ---
+  function startRain() {
+    showEvent('ランダム落下！！', 'おじゃまブロックも降ってくる');
+    Snd.sfx.alarm();
+    var n = hard() ? 4 + Math.floor(Math.random() * 4)
+                   : 3 + Math.floor(Math.random() * 3);
+    var fs = [];
+    for (var i = 0; i < n; i++) {
+      var gRate = (score >= GARBAGE_SCORE)
+        ? (mayhem() ? RAIN_GARBAGE_MAYHEM : RAIN_GARBAGE) : 0;
+      var isG = Math.random() < gRate;
+      fs.push({
+        x: Math.floor(Math.random() * COLS),
+        y: -2 - Math.random() * 6,
+        t: isG ? 'G' : randColor(),
+        sp: 0.020 + Math.random() * 0.006
+      });
+    }
+    setAnim('rain', 99999, { fallers: fs }, function () { beginResolve(true); });
+  }
+
+  function updateRain(fs, dt) {
+    for (var i = fs.length - 1; i >= 0; i--) {
+      var f = fs[i];
+      f.y += f.sp * dt;
+      var ly = Math.floor(f.y);
+      var restOnFloor = (ly + 1 >= TOTAL_ROWS);
+      var restOnStack = (ly + 1 < TOTAL_ROWS && ly + 1 >= 0 && grid[ly + 1][f.x]);
+      if (restOnFloor || restOnStack) {
+        if (ly >= 0 && !grid[ly][f.x]) {
+          grid[ly][f.x] = mkCell(f.t, !!f.bomb, false);
+          spawnDustAt(f.x, ly);
+          if (f.t === 'G') Snd.sfx.garbage(); else Snd.sfx.lock();
+        }
+        fs.splice(i, 1);
+      }
+    }
+    return fs.length === 0;
+  }
+
+  // --- 流星群 (爆弾が大量に降ってくる) ---
+  function startMeteor() {
+    eventCooldown = EVENT_COOLDOWN;
+    chain = 0; didClear = false;
+    showEvent('\u2604 \u6d41\u661f\u7fa4\uff01\uff01', '爆弾が降ってくる');
+    Snd.sfx.alarm();
+    addShake(8, 400);
+    var cnt = METEOR_MIN + Math.floor(Math.random() * (METEOR_MAX - METEOR_MIN + 1));
+    var fs = [];
+    for (var i = 0; i < cnt; i++) {
+      fs.push({
+        x: Math.floor(Math.random() * COLS),
+        y: -3 - Math.random() * 12,
+        t: '*', bomb: true,
+        sp: 0.026 + Math.random() * 0.012
+      });
+    }
+    setAnim('rain', 99999, { fallers: fs }, function () { beginResolve(true); });
+  }
+
+  // --- ブロックシャッフル (盤面の色ブロックを総入れ替え) ---
+  function startShuffle() {
+    eventCooldown = EVENT_COOLDOWN;
+    chain = 0; didClear = false;
+    var cells = [], y, x;
+    for (y = 0; y < TOTAL_ROWS; y++) {
+      for (x = 0; x < COLS; x++) if (isColor(grid[y][x])) cells.push([x, y]);
+    }
+    if (!cells.length) { nextTurn(); return; }
+    showEvent('\u2622 \u30d6\u30ed\u30c3\u30af\u30b7\u30e3\u30c3\u30d5\u30eb\uff01\uff01',
+              '盤面のブロックが総入れ替え');
+    Snd.sfx.shuffle();
+    addShake(9, 380);
+    spawnRecolorBurst(cells);
+    setAnim('shuffle', 440, { cells: cells }, function () {
+      for (var i = 0; i < cells.length; i++) {
+        var c = grid[cells[i][1]][cells[i][0]];
+        if (c) c.t = randColor();
+      }
+      beginResolve(true);
+    });
+  }
+
+  // --- スコア2倍タイム ---
+  function startDouble() {
+    doubleTimer = DOUBLE_MS;
+    showEvent('\u2728 SCORE x2 TIME\uff01\uff01', (DOUBLE_MS / 1000) + '秒間、得点が2倍');
+    Snd.sfx.double();
+    updateHUD();
+  }
+
+  // --- 首切り役人 (ランダムな1行を切り落とす) ---
+  function startHeadsman() {
+    eventCooldown = EVENT_COOLDOWN;
+    chain = 0; didClear = false;
+    var rows = [], y, x;
+    for (y = 0; y < TOTAL_ROWS; y++) {
+      for (x = 0; x < COLS; x++) if (grid[y][x]) { rows.push(y); break; }
+    }
+    if (!rows.length) { nextTurn(); return; }
+    var ry = rows[Math.floor(Math.random() * rows.length)];
+
+    var cnt = 0;
+    for (x = 0; x < COLS; x++) if (grid[ry][x]) cnt++;
+
+    showEvent('\u9996\u5207\u308a\u5f79\u4eba\uff01\uff01', 'ランダムな1行が切り落とされる');
+    Snd.sfx.guillotine();
+    addShake(10, 420);
+
+    setAnim('heads', 520, { row: ry, blocks: cnt }, function () {
+      var killed = removeRows([ry]);
+      var gain = applyScore(cnt * 40 * level * comboMul());
+      addCleared(cnt);
+      didClear = cnt > 0;
+      showToast('\u9996\u5207\u308a\u5f79\u4eba', '+' + gain, true);
+      paraBonus(killed);
+      updateBest();
+      updateHUD();
+      beginResolve(true);
+    });
+  }
+
+  // --- バイオハザード (ウイルスが広がる) ---
+  function virusCount() {
+    var c = 0;
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) if (grid[y][x] && grid[y][x].virus) c++;
+    }
+    return c;
+  }
+
+  function startVirus() {
+    var cands = [];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) if (grid[y][x] && !grid[y][x].virus) cands.push([x, y]);
+    }
+    if (!cands.length) return;
+    var p = cands[Math.floor(Math.random() * cands.length)];
+    grid[p[1]][p[0]].virus = true;
+    virusTimer = VIRUS_SPREAD_MS;
+    virusWarned = false;
+    showEvent('\u2623 \u30d0\u30a4\u30aa\u30cf\u30b6\u30fc\u30c9\uff01\uff01', '感染が広がる。全滅する前に消せ！');
+    Snd.sfx.virus();
+    addShake(8, 340);
+    spawnVirusBurst([p]);
+  }
+
+  function updateVirus(dt) {
+    if (virusTimer <= 0) return;          // 感染がなければ何もしない
+    virusTimer -= dt;
+    if (virusTimer > 0) return;
+    virusTimer = VIRUS_SPREAD_MS;
+
+    var inf = [], y, x;
+    for (y = 0; y < TOTAL_ROWS; y++) {
+      for (x = 0; x < COLS; x++) if (grid[y][x] && grid[y][x].virus) inf.push([x, y]);
+    }
+    if (!inf.length) { virusTimer = 0; virusWarned = false; return; }
+
+    // 感染源の順番をシャッフルして、1回に増える数を抑える
+    for (var j = inf.length - 1; j > 0; j--) {
+      var q = Math.floor(Math.random() * (j + 1));
+      var tmp = inf[j]; inf[j] = inf[q]; inf[q] = tmp;
+    }
+
+    var newly = [];
+    for (var i = 0; i < inf.length; i++) {
+      if (newly.length >= VIRUS_MAX_NEW) break;
+      if (Math.random() > VIRUS_SPREAD_P) continue;
+      var nb = [], d = [[1,0],[-1,0],[0,1],[0,-1]];
+      for (var k = 0; k < 4; k++) {
+        var nx = inf[i][0] + d[k][0], ny = inf[i][1] + d[k][1];
+        if (!inField(nx, ny)) continue;
+        if (grid[ny][nx] && !grid[ny][nx].virus) nb.push([nx, ny]);
+      }
+      if (!nb.length) continue;
+      var t = nb[Math.floor(Math.random() * nb.length)];
+      grid[t[1]][t[0]].virus = true;
+      newly.push(t);
+    }
+    if (newly.length) {
+      spawnVirusBurst(newly);
+      Snd.sfx.virusSpread();
+    }
+
+    var total = countBlocks();
+    var now = virusCount();
+    if (total >= VIRUS_LOSE_MIN && now >= total) { gameOver('virus'); return; }
+    if (!virusWarned && total >= VIRUS_LOSE_MIN && now >= total * 0.65) {
+      virusWarned = true;
+      showEvent('\u2623 \u611f\u67d3\u62e1\u5927\u4e2d\uff01', '感染ブロックを消さないと全滅');
+    }
+  }
+
+  // --- 停電 ---
+  function startBlackout() {
+    showEvent('⚡ 停電発生！！', 'しばらく盤面が見えなくなる');
+    Snd.sfx.power();
+    blackout = mayhem() ? BLACKOUT_MAYHEM : (hard() ? BLACKOUT_HARD : BLACKOUT_MS);
+    blackoutTotal = blackout;
+    Snd.setFilter(420, 0.25);
+    Snd.duck(0.45);
+    addShake(8, 350);
+    setAnim('banner', 700, null, function () { nextTurn(); });
+  }
+
+  // --- 寄生虫発生 ---
+  function startParasite() {
+    var cands = paraCandidates();
+    var pt = freeParaType();
+    if (!pt || !cands.length) { nextTurn(); return; }
+    var pick = cands[Math.floor(Math.random() * cands.length)];
+    grid[pick[1]][pick[0]].para = mkPara(pt);
+    showEvent(paraName(pt) + ' 発生！！', pt === 'garbage'
+      ? '移動した跡はおじゃまブロックになる'
+      : '移動した跡のブロックが変色する');
+    Snd.sfx.parasite();
+    setAnim('banner', 800, null, function () { nextTurn(); });
+  }
+
+  // 変色虫は最初から、おじゃま虫は PARA_LATE_SCORE から。各タイプ1体まで。
+  function paraTypes() {
+    return score >= PARA_LATE_SCORE ? ['recolor', 'garbage'] : ['recolor'];
+  }
+  function mkPara(type) { return { type: type, timer: PARA_INTERVAL, ph: 0 }; }
+
+  // 合計の上限: 1体 → 3000点で2体 → MAYHEM_SCORE で3体
+  function paraTotalMax() {
+    if (score >= MAYHEM_SCORE) return 3;
+    if (score >= PARA_LATE_SCORE) return 2;
+    return 1;
+  }
+  function paraPerTypeMax() { return score >= MAYHEM_SCORE ? 2 : 1; }
+
+  function paraCountTotal() {
+    var c = 0;
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) if (grid[y][x] && grid[y][x].para) c++;
+    }
+    return c;
+  }
+
+  function paraCountOf(type) {
+    var n = 0;
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        var c = grid[y][x];
+        if (c && c.para && c.para.type === type) n++;
+      }
+    }
+    return n;
+  }
+
+  // 盤面にいなくて、かつ復活待ちでもないタイプをひとつ返す (なければ null)
+  function freeParaType() {
+    if (paraCountTotal() >= paraTotalMax()) return null;
+    var ts = paraTypes(), avail = [], cap = paraPerTypeMax();
+    for (var i = 0; i < ts.length; i++) {
+      if (paraCountOf(ts[i]) < cap && paraCooldown[ts[i]] <= 0) avail.push(ts[i]);
+    }
+    if (!avail.length) return null;
+    return avail[Math.floor(Math.random() * avail.length)];
+  }
+
+  function paraName(type) { return type === 'garbage' ? 'おじゃま虫' : '変色虫'; }
+
+  function paraCandidates() {
+    var out = [];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        var c = grid[y][x];
+        if (isColor(c) && !c.para) out.push([x, y]);
+      }
+    }
+    return out;
+  }
+
+  // 寄生虫の引っ越し。元いたブロックはおじゃま化する。
+  function updateParasites(dt) {
+    var movers = [];
+    for (var y = 0; y < TOTAL_ROWS; y++) {
+      for (var x = 0; x < COLS; x++) {
+        var c = grid[y][x];
+        if (!c || !c.para) continue;
+        c.para.ph += dt;
+        c.para.timer -= dt;
+        if (c.para.timer <= 0) movers.push([x, y]);
+      }
+    }
+    for (var i = 0; i < movers.length; i++) {
+      var sx = movers[i][0], sy = movers[i][1];
+      var src = grid[sy][sx];
+      if (!src || !src.para) continue;
+      var cands = paraCandidates();
+      if (!cands.length) { src.para.timer = PARA_INTERVAL; continue; }
+      var dst = cands[Math.floor(Math.random() * cands.length)];
+      var ptype = src.para.type;
+      grid[dst[1]][dst[0]].para = mkPara(ptype);
+      // 抜け殻: 変色虫なら別の色に、おじゃま虫ならおじゃまブロックに
+      grid[sy][sx] = (ptype === 'garbage')
+        ? mkCell('G', false, false)
+        : mkCell(otherColor(src.t), false, false);
+      spawnParaTrail(sx, sy, dst[0], dst[1], ptype);
+      Snd.sfx.parasite();
+    }
+  }
+
+  // =====================================================================
+  //  ゲーム終了 / タイトル
+  // =====================================================================
+  function gameOver(reason) {
+    state = 'over';
+    current = null;
+    anim = null;
+    Snd.bgmStop();
+    Snd.sfx.gameOver();
+    Snd.setFilter(20000, 0.05);
+    updateBest();
+    updateHUD();
+    addShake(12, 400);
+    var virusEnd = (reason === 'virus');
+    ovTitle.textContent = virusEnd ? 'INFECTED' : 'GAME OVER';
+    ovSub.innerHTML =
+      (virusEnd ? '<b style="color:#b6ff3d">\u2623 \u5168\u30d6\u30ed\u30c3\u30af\u304c\u611f\u67d3\u3057\u305f</b><br>' : '') +
+      'SCORE ' + score + (newBest ? '  <b style="color:#ffd93d">&#9733; NEW RECORD!</b>' : '') +
+      '<br>' + (isTouch ? 'ボタンを選んでください' : 'Enter でもう一度');
+    ovButtons.style.display = 'flex';
+    overlay.classList.add('show');
+  }
+
+  function showTitle() {
+    state = 'ready';
+    current = null;
+    anim = null;
+    particles = []; shocks = []; shakeT = 0;
+    blackout = 0;
+    grid = emptyGrid();
+    queue = []; holdItem = null; canHold = true;
+    Snd.bgmStop();
+    Snd.setFilter(20000, 0.05);
+    overlay.classList.remove('show');
+    titleBest.textContent = best;
+    titleEl.classList.add('show');
+    if (!isTouch) startBtn.focus();
+  }
+
+  function showToast(text, sub, big) {
+    if (!text) return;
+    toastMain.textContent = text;
+    toastSub.textContent = sub || '';
+    toastEl.classList.remove('event');
+    toastEl.classList.toggle('big', !!big);
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 850);
+  }
+
+  function updateHUD() {
+    if (holdH2) holdH2.textContent = holdUnlocked() ? 'Hold' : 'Hold ' + HOLD_SCORE;
+    if (holdPadBtn) holdPadBtn.classList.toggle('locked', !holdUnlocked());
+    var nc = colorCount();
+    if (shownColors && nc > shownColors && state === 'playing') {
+      showToast('色が増えた！', nc + ' COLORS', true);
+    }
+    shownColors = nc;
+    var dbl = doubleTimer > 0;
+    el.score.parentNode.firstChild.textContent = dbl ? 'SCORE x2' : 'SCORE';
+    el.score.style.color = dbl ? '#ffd93d' : '';
+    el.score.textContent = score;
+    el.lines.textContent = cleared;
+    el.level.textContent = level;
+    var cb = Math.max(0, combo);
+    el.combo.textContent = cb;
+    el.combo.style.color = cb > 0 ? '#ffd93d' : '';
+    el.best.textContent = best;
+  }
+
+  // =====================================================================
+  //  エフェクト
+  // =====================================================================
+  function addShake(mag, dur) {
+    shakeMag = Math.max(shakeMag, mag);
+    shakeT = Math.max(shakeT, dur);
+    shakeDur = Math.max(shakeDur, dur);
+  }
+
+  function spawnParticle(px, py, color, vx, vy, life, size) {
+    if (particles.length > 700) return;
+    particles.push({ x: px, y: py, vx: vx, vy: vy, life: life, max: life, color: color, size: size });
+  }
+
+  function cellColor(c) {
+    if (!c) return '#ffffff';
+    return COLORS[c.t] || '#ffffff';
+  }
+
+  function spawnClearBurst(rows) {
+    var per = CELL < 18 ? 3 : 5;
+    for (var i = 0; i < rows.length; i++) {
+      var y = rows[i];
+      var py = (y + 0.5) * CELL;
+      for (var x = 0; x < COLS; x++) {
+        var col = cellColor(grid[y][x]);
+        for (var k = 0; k < per; k++) {
+          spawnParticle(
+            (x + Math.random()) * CELL, py + (Math.random() - 0.5) * CELL,
+            Math.random() < 0.3 ? '#ffffff' : col,
+            (Math.random() - 0.5) * 0.55,
+            (Math.random() - 0.75) * 0.42,
+            420 + Math.random() * 320,
+            CELL * (0.12 + Math.random() * 0.16)
+          );
+        }
+      }
+    }
+  }
+
+  function spawnMatchBurst(cells) {
+    for (var i = 0; i < cells.length; i++) {
+      var x = cells[i][0], y = cells[i][1];
+      var col = cellColor(grid[y][x]);
+      for (var k = 0; k < 7; k++) {
+        var a = Math.random() * Math.PI * 2, sp = 0.1 + Math.random() * 0.3;
+        spawnParticle(
+          (x + 0.5) * CELL, (y + 0.5) * CELL,
+          Math.random() < 0.35 ? '#ffffff' : col,
+          Math.cos(a) * sp, Math.sin(a) * sp,
+          380 + Math.random() * 260,
+          CELL * (0.1 + Math.random() * 0.15)
+        );
+      }
+    }
+  }
+
+  function spawnExplosion(centers, cells) {
+    var i;
+    for (i = 0; i < centers.length; i++) {
+      var cx = (centers[i][0] + 0.5) * CELL;
+      var cy = (centers[i][1] + 0.5) * CELL;
+      shocks.push({ x: cx, y: cy, t: 0, max: 440, r: BOMB_RADIUS * CELL * 1.15 });
+      for (var k = 0; k < 40; k++) {
+        var a = Math.random() * Math.PI * 2, sp = 0.15 + Math.random() * 0.75;
+        spawnParticle(cx, cy,
+          ['#fff3b0', '#ffb43d', '#ff6a3d', '#ffffff'][Math.floor(Math.random() * 4)],
+          Math.cos(a) * sp, Math.sin(a) * sp,
+          400 + Math.random() * 500,
+          CELL * (0.12 + Math.random() * 0.26));
+      }
+    }
+    for (i = 0; i < cells.length; i++) {
+      var x = cells[i][0], y = cells[i][1];
+      var col = cellColor(grid[y][x]);
+      for (var m = 0; m < 3; m++) {
+        var a2 = Math.random() * Math.PI * 2, sp2 = 0.08 + Math.random() * 0.4;
+        spawnParticle((x + 0.5) * CELL, (y + 0.5) * CELL, col,
+          Math.cos(a2) * sp2, Math.sin(a2) * sp2,
+          350 + Math.random() * 400, CELL * (0.1 + Math.random() * 0.2));
+      }
+    }
+  }
+
+  function spawnRainbowBurst(cells, colors) {
+    for (var i = 0; i < cells.length; i++) {
+      var x = cells[i][0], y = cells[i][1];
+      var base = colors && colors.length
+        ? COLORS[colors[Math.floor(Math.random() * colors.length)]]
+        : '#ffffff';
+      for (var k = 0; k < 7; k++) {
+        var a = Math.random() * Math.PI * 2, sp = 0.1 + Math.random() * 0.4;
+        spawnParticle((x + 0.5) * CELL, (y + 0.5) * CELL,
+          Math.random() < 0.35 ? '#ffffff' : base,
+          Math.cos(a) * sp, Math.sin(a) * sp,
+          420 + Math.random() * 340, CELL * (0.1 + Math.random() * 0.18));
+      }
+    }
+  }
+
+  function spawnVirusBurst(cells) {
+    for (var i = 0; i < cells.length; i++) {
+      var x = cells[i][0], y = cells[i][1];
+      for (var k = 0; k < 8; k++) {
+        var a = Math.random() * Math.PI * 2, sp = 0.06 + Math.random() * 0.2;
+        spawnParticle((x + 0.5) * CELL, (y + 0.5) * CELL,
+          Math.random() < 0.5 ? '#b6ff3d' : '#6f9c14',
+          Math.cos(a) * sp, Math.sin(a) * sp,
+          300 + Math.random() * 260, CELL * (0.08 + Math.random() * 0.12));
+      }
+    }
+  }
+
+  function spawnRecolorBurst(cells) {
+    for (var i = 0; i < cells.length; i++) {
+      var x = cells[i][0], y = cells[i][1];
+      for (var k = 0; k < 7; k++) {
+        var a = Math.random() * Math.PI * 2, sp = 0.08 + Math.random() * 0.28;
+        spawnParticle((x + 0.5) * CELL, (y + 0.5) * CELL,
+          COLORS[COLOR_KEYS[Math.floor(Math.random() * COLOR_KEYS.length)]],
+          Math.cos(a) * sp, Math.sin(a) * sp,
+          320 + Math.random() * 280, CELL * (0.1 + Math.random() * 0.15));
+      }
+    }
+  }
+
+  function spawnParaTrail(x0, y0, x1, y1, ptype) {
+    var col = (ptype === 'garbage') ? '#c46bff' : '#5cff9d';
+    var ax = (x0 + 0.5) * CELL, ay = (y0 + 0.5) * CELL;
+    var bx = (x1 + 0.5) * CELL, by = (y1 + 0.5) * CELL;
+    for (var i = 0; i < 24; i++) {
+      var t = i / 23;
+      spawnParticle(ax + (bx - ax) * t, ay + (by - ay) * t, col,
+        (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08,
+        260 + Math.random() * 220, CELL * 0.14);
+    }
+  }
+
+  function spawnDustAt(x, y) {
+    if (y < 0) return;
+    var py = (y + 1) * CELL;
+    for (var k = 0; k < 5; k++) {
+      spawnParticle((x + Math.random()) * CELL, py, 'rgba(200,210,255,1)',
+        (Math.random() - 0.5) * 0.4, -Math.random() * 0.12,
+        220 + Math.random() * 180, CELL * (0.08 + Math.random() * 0.12));
+    }
+  }
+
+  function updateEffects(dt) {
+    var i;
+    for (i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 0.0016 * dt;
+      p.vx *= 0.995;
+    }
+    for (i = shocks.length - 1; i >= 0; i--) {
+      shocks[i].t += dt;
+      if (shocks[i].t >= shocks[i].max) shocks.splice(i, 1);
+    }
+  }
+
+  // =====================================================================
+  //  描画
+  // =====================================================================
+  function shade(hex, amt) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = Math.min(255, Math.max(0, (n >> 16) + amt));
+    var g = Math.min(255, Math.max(0, ((n >> 8) & 255) + amt));
+    var b = Math.min(255, Math.max(0, (n & 255) + amt));
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  function drawCell(ctx, px, py, size, color, alpha) {
+    ctx.globalAlpha = (alpha === undefined) ? 1 : alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(px, py, size, size);
+    ctx.fillStyle = shade(color, 45);
+    ctx.fillRect(px, py, size, size * 0.16);
+    ctx.fillStyle = shade(color, -60);
+    ctx.fillRect(px, py + size * 0.84, size, size * 0.16);
+    ctx.strokeStyle = 'rgba(0,0,0,.45)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, size - 1, size - 1);
+    ctx.globalAlpha = 1;
+  }
+
+  // おじゃまブロック（そのまま維持）
+  function drawGarbage(ctx, px, py, size, alpha) {
+    ctx.globalAlpha = (alpha === undefined) ? 1 : alpha;
+    ctx.fillStyle = '#4b5065';
+    ctx.fillRect(px, py, size, size);
+    ctx.fillStyle = '#5f657e';
+    ctx.fillRect(px + size * 0.1, py + size * 0.1, size * 0.8, size * 0.8);
+    ctx.strokeStyle = 'rgba(20,22,34,.9)';
+    ctx.lineWidth = Math.max(1, size * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(px + size * 0.22, py + size * 0.22);
+    ctx.lineTo(px + size * 0.78, py + size * 0.78);
+    ctx.moveTo(px + size * 0.78, py + size * 0.22);
+    ctx.lineTo(px + size * 0.22, py + size * 0.78);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, size - 1, size - 1);
+    ctx.globalAlpha = 1;
+  }
+
+  // 爆弾ブロック（単体で落ちてくる）
+  function drawBomb(ctx, px, py, size, alpha, phase) {
+    var pulse = 0.5 + 0.5 * Math.sin(phase / 120);
+    ctx.globalAlpha = (alpha === undefined) ? 1 : alpha;
+    ctx.fillStyle = '#241018';
+    ctx.fillRect(px, py, size, size);
+    ctx.strokeStyle = 'rgba(255,92,114,' + (0.45 + 0.45 * pulse) + ')';
+    ctx.lineWidth = Math.max(1, size * 0.09);
+    ctx.strokeRect(px + size * 0.06, py + size * 0.06, size * 0.88, size * 0.88);
+
+    var cx = px + size / 2, cy = py + size / 2;
+    ctx.fillStyle = '#0d0509';
+    ctx.beginPath();
+    ctx.arc(cx, cy + size * 0.05, size * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,140,90,' + (0.5 + 0.5 * pulse) + ')';
+    ctx.lineWidth = Math.max(1, size * 0.07);
+    ctx.stroke();
+    // 導火線
+    ctx.strokeStyle = '#d8b26a';
+    ctx.lineWidth = Math.max(1, size * 0.06);
+    ctx.beginPath();
+    ctx.moveTo(cx + size * 0.12, cy - size * 0.22);
+    ctx.quadraticCurveTo(cx + size * 0.3, cy - size * 0.38, cx + size * 0.22, cy - size * 0.44);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,225,130,' + (0.55 + 0.45 * pulse) + ')';
+    ctx.beginPath();
+    ctx.arc(cx + size * 0.22, cy - size * 0.46, size * 0.1 * (0.8 + 0.4 * pulse), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // レインボー爆弾ブロック: 虹の帯ときらめき
+  function drawRainbowBomb(ctx, px, py, size, alpha, phase) {
+    var band = ['R', 'O', 'Y', 'E', 'C', 'B', 'P'];
+    ctx.save();
+    ctx.globalAlpha = (alpha === undefined) ? 1 : alpha;
+    ctx.fillStyle = '#0d1030';
+    ctx.fillRect(px, py, size, size);
+
+    // 斜めに流れる虹の帯
+    ctx.beginPath();
+    ctx.rect(px + size * 0.08, py + size * 0.08, size * 0.84, size * 0.84);
+    ctx.clip();
+    var bh = size * 0.84 / band.length;
+    var off = (phase / 26) % (bh * band.length);
+    for (var i = -1; i < band.length + 1; i++) {
+      ctx.fillStyle = COLORS[band[(i + band.length) % band.length]];
+      ctx.fillRect(px + size * 0.08, py + size * 0.08 + i * bh + off - bh, size * 0.84, bh + 0.6);
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = (alpha === undefined) ? 1 : alpha;
+    // 中央のきらめき
+    var cx = px + size / 2, cy = py + size / 2;
+    var pulse = 0.55 + 0.45 * Math.sin(phase / 140);
+    var r1 = size * 0.34 * pulse, r2 = size * 0.12 * pulse;
+    ctx.fillStyle = 'rgba(255,255,255,.95)';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r1); ctx.lineTo(cx + r2, cy - r2);
+    ctx.lineTo(cx + r1, cy); ctx.lineTo(cx + r2, cy + r2);
+    ctx.lineTo(cx, cy + r1); ctx.lineTo(cx - r2, cy + r2);
+    ctx.lineTo(cx - r1, cy); ctx.lineTo(cx - r2, cy - r2);
+    ctx.closePath(); ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,.85)';
+    ctx.lineWidth = Math.max(1, size * 0.07);
+    ctx.strokeRect(px + size * 0.08, py + size * 0.08, size * 0.84, size * 0.84);
+    ctx.strokeStyle = 'rgba(0,0,0,.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, size - 1, size - 1);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  // カラー爆弾ブロック
+  function drawColorBomb(ctx, px, py, size, alpha, phase) {
+    var seg = ['R', 'O', 'Y', 'E', 'B', 'P'];
+    ctx.globalAlpha = (alpha === undefined) ? 1 : alpha;
+    ctx.fillStyle = '#1b1030';
+    ctx.fillRect(px, py, size, size);
+    var cx = px + size / 2, cy = py + size / 2, r = size * 0.38;
+    var rot = phase / 700;
+    for (var i = 0; i < seg.length; i++) {
+      ctx.fillStyle = COLORS[seg[i]];
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, rot + i * Math.PI / 3, rot + (i + 1) * Math.PI / 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    var pulse = 0.5 + 0.5 * Math.sin(phase / 130);
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.3 + 0.5 * pulse) + ')';
+    ctx.lineWidth = Math.max(1, size * 0.07);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, size - 1, size - 1);
+    ctx.globalAlpha = 1;
+  }
+
+  // 変色虫: 丸い体に触角。背中に3色の斑点。
+  function drawParaRecolor(ctx, cx, cy, size, phase) {
+    var wob = Math.sin(phase / 130) * size * 0.08;
+    var col = '#5cff9d';
+    ctx.fillStyle = 'rgba(92,255,157,.22)';
+    ctx.beginPath(); ctx.arc(cx, cy, size * 0.45, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(cx + wob, cy + size * 0.02, size * 0.25, size * 0.19, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = col;
+    ctx.lineWidth = Math.max(1, size * 0.055);
+    ctx.beginPath();
+    ctx.moveTo(cx + wob - size * 0.1, cy - size * 0.14);
+    ctx.lineTo(cx + wob - size * 0.19, cy - size * 0.36);
+    ctx.moveTo(cx + wob + size * 0.1, cy - size * 0.14);
+    ctx.lineTo(cx + wob + size * 0.19, cy - size * 0.36);
+    ctx.stroke();
+
+    // 背中の色見本 (変色の目印)
+    var dots = ['#ff5c72', '#ffd93d', '#4a7dff'];
+    for (var i = 0; i < 3; i++) {
+      ctx.fillStyle = dots[i];
+      ctx.beginPath();
+      ctx.arc(cx + wob + (i - 1) * size * 0.11, cy + size * 0.11, size * 0.035, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 丸い目
+    ctx.fillStyle = '#0a0b17';
+    var r = Math.max(1, size * 0.045);
+    ctx.beginPath(); ctx.arc(cx + wob - size * 0.08, cy - size * 0.03, r, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + wob + size * 0.08, cy - size * 0.03, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // おじゃま虫: とげとげの体に角、X の目。
+  function drawParaGarbage(ctx, cx, cy, size, phase) {
+    var wob = Math.sin(phase / 110) * size * 0.07;
+    var col = '#c46bff';
+    ctx.fillStyle = 'rgba(196,107,255,.22)';
+    ctx.beginPath(); ctx.arc(cx, cy, size * 0.46, 0, Math.PI * 2); ctx.fill();
+
+    // とげのある体
+    var spikes = 9, rO = size * 0.28, rI = size * 0.17;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    for (var i = 0; i < spikes * 2; i++) {
+      var a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2 + phase / 1400;
+      var rr = (i % 2 === 0) ? rO : rI;
+      var X = cx + wob + Math.cos(a) * rr, Y = cy + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(X, Y); else ctx.lineTo(X, Y);
+    }
+    ctx.closePath(); ctx.fill();
+
+    // 角
+    ctx.strokeStyle = col;
+    ctx.lineWidth = Math.max(1, size * 0.06);
+    ctx.beginPath();
+    ctx.moveTo(cx + wob - size * 0.11, cy - size * 0.2);
+    ctx.lineTo(cx + wob - size * 0.23, cy - size * 0.42);
+    ctx.moveTo(cx + wob + size * 0.11, cy - size * 0.2);
+    ctx.lineTo(cx + wob + size * 0.23, cy - size * 0.42);
+    ctx.stroke();
+
+    // X の目
+    ctx.strokeStyle = '#1a0b22';
+    ctx.lineWidth = Math.max(1, size * 0.055);
+    var e = size * 0.048;
+    var ex = [-0.085, 0.085];
+    for (var k = 0; k < 2; k++) {
+      var mx = cx + wob + size * ex[k], my = cy - size * 0.01;
+      ctx.beginPath();
+      ctx.moveTo(mx - e, my - e); ctx.lineTo(mx + e, my + e);
+      ctx.moveTo(mx + e, my - e); ctx.lineTo(mx - e, my + e);
+      ctx.stroke();
+    }
+  }
+
+  // 感染ブロックのしるし: とげとげのウイルス
+  function drawVirus(ctx, px, py, size, phase) {
+    var cx = px + size / 2, cy = py + size / 2;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    // 病んだ緑の被膜
+    ctx.fillStyle = 'rgba(150,220,50,.34)';
+    ctx.fillRect(px, py, size, size);
+
+    var pulse = 0.5 + 0.5 * Math.sin(phase / 180);
+    var col = 'rgba(182,255,61,' + (0.75 + 0.25 * pulse) + ')';
+    var r = size * 0.22;
+
+    // とげ
+    ctx.strokeStyle = col;
+    ctx.lineWidth = Math.max(1, size * 0.06);
+    var spikes = 8;
+    for (var i = 0; i < spikes; i++) {
+      var a = (i / spikes) * Math.PI * 2 + phase / 1600;
+      var x1 = cx + Math.cos(a) * r, y1 = cy + Math.sin(a) * r;
+      var x2 = cx + Math.cos(a) * (r + size * 0.13), y2 = cy + Math.sin(a) * (r + size * 0.13);
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(x2, y2, size * 0.045, 0, Math.PI * 2); ctx.fill();
+    }
+    // 本体
+    ctx.fillStyle = 'rgba(90,140,20,.9)';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = Math.max(1, size * 0.055);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawParaMark(ctx, px, py, size, phase, type) {
+    var cx = px + size / 2, cy = py + size / 2;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    if (type === 'garbage') drawParaGarbage(ctx, cx, cy, size, phase);
+    else drawParaRecolor(ctx, cx, cy, size, phase);
+    ctx.restore();
+  }
+
+  function drawBlock(ctx, px, py, size, cell, alpha) {
+    if (cell.rbomb || cell.t === '#') { drawRainbowBomb(ctx, px, py, size, alpha, animPhase); return; }
+    if (cell.cbomb || cell.t === '%') { drawColorBomb(ctx, px, py, size, alpha, animPhase); return; }
+    if (cell.bomb || cell.t === '*') { drawBomb(ctx, px, py, size, alpha, animPhase); return; }
+    if (cell.t === 'G') { drawGarbage(ctx, px, py, size, alpha); return; }
+    drawCell(ctx, px, py, size, COLORS[cell.t] || '#ffffff', alpha);
+    if (cell.virus && (alpha === undefined || alpha > 0.5)) {
+      drawVirus(ctx, px, py, size, animPhase);
+    }
+    if (cell.para && (alpha === undefined || alpha > 0.5)) {
+      var pt = (cell.para && cell.para.type) || cell.paraType || 'recolor';
+      drawParaMark(ctx, px, py, size, animPhase, pt);
+    }
+  }
+
+  function drawGridLines(dim) {
+    bctx.strokeStyle = dim ? 'rgba(255,255,255,.015)' : 'rgba(255,255,255,.05)';
+    bctx.lineWidth = 1;
+    for (var x = 1; x < COLS; x++) {
+      bctx.beginPath();
+      bctx.moveTo(x * CELL + 0.5, 0);
+      bctx.lineTo(x * CELL + 0.5, ROWS * CELL);
+      bctx.stroke();
+    }
+    for (var y = 1; y < ROWS; y++) {
+      bctx.beginPath();
+      bctx.moveTo(0, y * CELL + 0.5);
+      bctx.lineTo(COLS * CELL, y * CELL + 0.5);
+      bctx.stroke();
+    }
+  }
+
+  function render() {
+    var W = COLS * CELL, H = ROWS * CELL;
+    var x, y, i;
+
+    var dark = false, darkAlpha = 1, flicker = false;
+    if (blackout > 0) {
+      dark = true;
+      var elapsed = blackoutTotal - blackout;
+      if (elapsed < 650 || blackout < 650) flicker = Math.random() < 0.28;
+      darkAlpha = flicker ? 0.75 : 0.1;
+    }
+
+    bctx.save();
+    if (shakeT > 0 && shakeMag > 0) {
+      var sm = shakeMag * (shakeT / shakeDur);
+      bctx.translate((Math.random() - 0.5) * sm, (Math.random() - 0.5) * sm);
+    }
+
+    bctx.fillStyle = dark ? '#04040a' : '#0a0b17';
+    bctx.fillRect(-24, -24, W + 48, H + 48);
+    drawGridLines(dark);
+
+    // 出現列の目印
+    if (!dark) {
+      bctx.fillStyle = 'rgba(86,209,220,.06)';
+      bctx.fillRect(SPAWN_X * CELL, 0, CELL, H);
+    }
+
+    var flashRows = null, phase = 0, squeeze = 0;
+    var matchMark = null, blastMark = null, recolorMark = null;
+    var headsRow = -1, headsP = 0;
+    if (anim) {
+      if (anim.kind === 'lines') {
+        flashRows = {};
+        for (i = 0; i < anim.data.rows.length; i++) flashRows[anim.data.rows[i]] = true;
+        if (anim.t < CLEAR_FLASH) { phase = 1; squeeze = 0; }
+        else { phase = 2; squeeze = Math.min(1, (anim.t - CLEAR_FLASH) / CLEAR_SQUEEZE); }
+      } else if (anim.kind === 'match') {
+        matchMark = {};
+        for (i = 0; i < anim.data.cells.length; i++) {
+          matchMark[anim.data.cells[i][0] + ',' + anim.data.cells[i][1]] = true;
+        }
+      } else if (anim.kind === 'heads') {
+        headsRow = anim.data.row;
+        headsP = Math.min(1, anim.t / (anim.dur * 0.62));
+      } else if (anim.kind === 'rainbow') {
+        matchMark = {};
+        for (i = 0; i < anim.data.cells.length; i++) {
+          matchMark[anim.data.cells[i][0] + ',' + anim.data.cells[i][1]] = true;
+        }
+      } else if (anim.kind === 'recolor' || anim.kind === 'shuffle') {
+        recolorMark = {};
+        for (i = 0; i < anim.data.cells.length; i++) {
+          recolorMark[anim.data.cells[i][0] + ',' + anim.data.cells[i][1]] = true;
+        }
+      } else if (anim.kind === 'explode') {
+        blastMark = {};
+        for (i = 0; i < anim.data.cells.length; i++) {
+          blastMark[anim.data.cells[i][0] + ',' + anim.data.cells[i][1]] = true;
+        }
+      }
+    }
+
+    for (y = 0; y < TOTAL_ROWS; y++) {
+      var py = y * CELL;
+      var isClearRow = flashRows && flashRows[y];
+
+      if (isClearRow && phase === 1) {
+        var a = 0.45 + 0.45 * Math.abs(Math.sin(anim.t / 26));
+        var grad = bctx.createLinearGradient(0, py, 0, py + CELL);
+        grad.addColorStop(0, 'rgba(255,255,255,' + (a * 0.5) + ')');
+        grad.addColorStop(0.5, 'rgba(255,255,255,' + a + ')');
+        grad.addColorStop(1, 'rgba(255,255,255,' + (a * 0.5) + ')');
+        bctx.fillStyle = grad;
+        bctx.fillRect(0, py, W, CELL);
+        continue;
+      }
+
+      // 首切り役人: 刃が通り過ぎたマスから消えていく
+      if (headsRow === y) {
+        var bladeX = headsP * W;
+        for (x = 0; x < COLS; x++) {
+          var hc = grid[y][x];
+          if (!hc) continue;
+          if (x * CELL + CELL * 0.5 < bladeX) continue;     // 切断済み
+          drawBlock(bctx, x * CELL, py, CELL, hc, dark ? darkAlpha : undefined);
+          bctx.globalAlpha = 0.35;
+          bctx.fillStyle = '#ff5c72';
+          bctx.fillRect(x * CELL, py, CELL, CELL);
+          bctx.globalAlpha = 1;
+        }
+        if (headsP < 1) {
+          bctx.globalAlpha = 0.95;
+          bctx.fillStyle = '#ffffff';
+          bctx.fillRect(bladeX - CELL * 0.08, py - CELL * 0.1, CELL * 0.16, CELL * 1.2);
+          bctx.globalAlpha = 0.45;
+          bctx.fillStyle = '#ff5c72';
+          bctx.fillRect(0, py + CELL * 0.42, bladeX, CELL * 0.16);
+          bctx.globalAlpha = 1;
+        }
+        continue;
+      }
+
+      for (x = 0; x < COLS; x++) {
+        var c = grid[y][x];
+        if (!c) continue;
+        var key = x + ',' + y;
+
+        if (isClearRow && phase === 2) {
+          var k = 1 - squeeze;
+          bctx.globalAlpha = k;
+          bctx.fillStyle = '#ffffff';
+          bctx.fillRect(x * CELL + (CELL - CELL * k) / 2, py + (CELL - CELL * k) / 2, CELL * k, CELL * k);
+          bctx.globalAlpha = 1;
+          continue;
+        }
+        if (matchMark && matchMark[key]) {
+          var mp = anim.t / anim.dur;
+          var s = 1 - mp * 0.75;
+          drawCell(bctx, x * CELL + (CELL - CELL * s) / 2, py + (CELL - CELL * s) / 2,
+                   CELL * s, '#ffffff', 0.35 + 0.65 * Math.abs(Math.sin(anim.t / 22)));
+          continue;
+        }
+        if (recolorMark && recolorMark[key]) {
+          drawBlock(bctx, x * CELL, py, CELL, c, dark ? darkAlpha : undefined);
+          bctx.globalAlpha = 0.6 * Math.abs(Math.sin(anim.t / 30));
+          bctx.fillStyle = '#ffffff';
+          bctx.fillRect(x * CELL, py, CELL, CELL);
+          bctx.globalAlpha = 1;
+          continue;
+        }
+        if (blastMark && blastMark[key]) {
+          var ep = anim.t / anim.dur;
+          bctx.globalAlpha = Math.max(0, 1 - ep);
+          bctx.fillStyle = ep < 0.35 ? '#ffffff' : '#ffb43d';
+          bctx.fillRect(x * CELL, py, CELL, CELL);
+          bctx.globalAlpha = 1;
+          continue;
+        }
+
+        drawBlock(bctx, x * CELL, py, CELL, c, dark ? darkAlpha : undefined);
+      }
+    }
+
+    // 落下中のランダムブロック
+    if (anim && anim.kind === 'rain') {
+      var fs = anim.data.fallers;
+      for (i = 0; i < fs.length; i++) {
+        var fy = fs[i].y * CELL;
+        if (fy < -CELL) continue;
+        drawBlock(bctx, fs[i].x * CELL, fy, CELL,
+                  { t: fs[i].t, bomb: false, para: null }, dark ? 0.6 : undefined);
+      }
+    }
+
+    // 操作中のブロック
+    if (current && !anim) {
+      drawBlock(bctx, current.x * CELL, current.y * CELL, CELL, current, dark ? 0.85 : undefined);
+    }
+
+    // 衝撃波
+    for (i = 0; i < shocks.length; i++) {
+      var sh = shocks[i];
+      var t = sh.t / sh.max;
+      bctx.globalAlpha = Math.max(0, 1 - t) * 0.8;
+      bctx.strokeStyle = '#fff0c0';
+      bctx.lineWidth = Math.max(2, CELL * 0.35 * (1 - t));
+      bctx.beginPath();
+      bctx.arc(sh.x, sh.y, sh.r * (0.15 + t), 0, Math.PI * 2);
+      bctx.stroke();
+      bctx.globalAlpha = 1;
+    }
+
+    // パーティクル
+    for (i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      bctx.globalAlpha = Math.max(0, Math.min(1, p.life / p.max));
+      bctx.fillStyle = p.color;
+      bctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+    bctx.globalAlpha = 1;
+
+    // 爆発フラッシュ
+    if (anim && anim.kind === 'explode' && anim.t < 130) {
+      bctx.globalAlpha = (1 - anim.t / 130) * 0.85;
+      bctx.fillStyle = '#ffffff';
+      bctx.fillRect(-24, -24, W + 48, H + 48);
+      bctx.globalAlpha = 1;
+    }
+
+    // 停電のビネット
+    if (dark) {
+      var vg = bctx.createRadialGradient(W / 2, H / 2, CELL, W / 2, H / 2, Math.max(W, H) * 0.75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,.92)');
+      bctx.fillStyle = vg;
+      bctx.fillRect(0, 0, W, H);
+      if (flicker) {
+        bctx.globalAlpha = 0.25;
+        bctx.fillStyle = '#ffffff';
+        bctx.fillRect(0, 0, W, H);
+        bctx.globalAlpha = 1;
+      }
+    }
+
+    bctx.restore();
+  }
+
+  function drawMiniIn(ctx, item, bx, by, bw, bh, size) {
+    if (!item) return;
+    drawBlock(ctx, bx + (bw - size) / 2, by + (bh - size) / 2, size, item);
+  }
+
+  function renderSide() {
+    nctx.clearRect(0, 0, nextCv._w, nextCv._h);
+    var n = Math.min(queue.length, nextCount);
+    for (var i = 0; i < n; i++) {
+      if (nextHoriz) {
+        var sw = nextCv._w / nextCount;
+        drawMiniIn(nctx, queue[i], i * sw, 0, sw, nextCv._h, miniCell);
+      } else {
+        var sh = nextCv._h / nextCount;
+        drawMiniIn(nctx, queue[i], 0, i * sh, nextCv._w, sh, miniCell);
+      }
+    }
+    hctx.clearRect(0, 0, holdCv._w, holdCv._h);
+    if (!holdUnlocked()) {
+      drawLock(hctx, holdCv._w / 2, holdCv._h / 2, Math.min(miniCell, holdCv._h * 0.62));
+    } else {
+      hctx.globalAlpha = canHold ? 1 : 0.35;
+      drawMiniIn(hctx, holdItem, 0, 0, holdCv._w, holdCv._h, miniCell);
+      hctx.globalAlpha = 1;
+    }
+  }
+
+  // ホールドが未解放のときの南京錠
+  function drawLock(ctx, cx, cy, size) {
+    var w = size * 0.72, h = size * 0.56;
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = '#8f93c0';
+    ctx.lineWidth = Math.max(1.5, size * 0.11);
+    // 掛け金は本体の上辺にぴったり乗せる (閉じた錠前に見えるように)
+    var topY = cy - h * 0.10;
+    ctx.beginPath();
+    ctx.arc(cx, topY, w * 0.30, Math.PI, 0);
+    ctx.stroke();
+    ctx.fillStyle = '#8f93c0';
+    ctx.fillRect(cx - w / 2, topY, w, h);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // =====================================================================
+  //  入力
+  // =====================================================================
+  var held = { left: false, right: false, down: false };
+  var DAS = 140, ARR = 35, SOFT = 40;
+  var dasDir = 0, dasTimer = 0, softTimer = 0;
+
+  function canControl() {
+    return state === 'playing' && !anim && !!current;
+  }
+
+  function doMove(dx) {
+    if (!canControl()) return;
+    if (move(dx, 0)) Snd.sfx.move();
+    else Snd.sfx.wall();
+  }
+  function doSoftDrop() {
+    if (!canControl()) return;
+    if (move(0, 1)) { score += 1; dropTimer = 0; Snd.sfx.soft(); updateHUD(); }
+  }
+  function doHardDrop() {
+    if (!canControl()) return;
+    hardDrop(); updateHUD();
+  }
+
+  function repeatInput(dt) {
+    if (!canControl()) return;
+    if (dasDir !== 0) {
+      dasTimer += dt;
+      while (dasTimer >= DAS + ARR) {
+        if (!move(dasDir, 0)) { dasTimer = DAS; break; }
+        dasTimer -= ARR;
+      }
+    }
+    if (held.down) {
+      softTimer += dt;
+      while (softTimer >= SOFT) {
+        softTimer -= SOFT;
+        if (move(0, 1)) { score += 1; dropTimer = 0; updateHUD(); }
+        else break;
+      }
+    }
+  }
+
+  // =====================================================================
+  //  メインループ
+  // =====================================================================
+  function tick(now) {
+    requestAnimationFrame(tick);
+    var dt = Math.min(100, now - (lastTime || now));
+    lastTime = now;
+    animPhase += dt;
+
+    if (shakeT > 0) {
+      shakeT = Math.max(0, shakeT - dt);
+      if (shakeT === 0) { shakeMag = 0; shakeDur = 1; }
+    }
+    updateEffects(dt);
+
+    if (state === 'playing') {
+      if (blackout > 0) {
+        blackout -= dt;
+        if (blackout <= 0) { blackout = 0; Snd.setFilter(20000, 0.3); Snd.duck(1); }
+      }
+      // 1秒ごとに各イベントを抽選する
+      if (eventCooldown > 0) eventCooldown -= dt;
+      if (paraCooldown.recolor > 0) paraCooldown.recolor -= dt;
+      if (paraCooldown.garbage > 0) paraCooldown.garbage -= dt;
+
+      eventClock += dt;
+      while (eventClock >= 1000) {
+        eventClock -= 1000;
+        if (!eventPending && eventCooldown <= 0 && Math.random() < eventChance()) {
+          eventPending = true;
+        }
+        if (!meteorPending && score >= METEOR_SCORE && Math.random() < METEOR_CHANCE) {
+          meteorPending = true;
+        }
+        if (score >= VIRUS_SCORE && virusCount() === 0 && Math.random() < virusChance()) {
+          startVirus();
+        }
+        if (!shufflePending && mayhem() && Math.random() < SHUFFLE_CHANCE) {
+          shufflePending = true;
+        }
+        if (score >= DOUBLE_SCORE && doubleTimer <= 0 && Math.random() < DOUBLE_CHANCE) {
+          startDouble();
+        }
+        if (!headsPending && score >= HEADS_SCORE && Math.random() < HEADS_CHANCE) {
+          headsPending = true;
+        }
+      }
+      if (doubleTimer > 0) {
+        doubleTimer -= dt;
+        if (doubleTimer <= 0) { doubleTimer = 0; updateHUD(); }
+      }
+
+      updateVirus(dt);
+      updateParasites(dt);
+      repeatInput(dt);
+
+      if (anim) {
+        anim.t += dt;
+        var done = anim.t >= anim.dur;
+        if (anim.kind === 'rain') done = updateRain(anim.data.fallers, dt);
+        if (done) {
+          var end = anim.end;
+          anim = null;
+          if (end) end();
+        }
+      } else if (current) {
+        var interval = gravityInterval();
+        dropTimer += dt;
+        while (dropTimer >= interval) {
+          dropTimer -= interval;
+          if (freeAt(current.x, current.y + 1)) current.y++;
+          else break;
+        }
+        // 接地したら少しだけ猶予を置いて固定
+        if (!freeAt(current.x, current.y + 1)) {
+          if (lockTimer === null) lockTimer = 0;
+          lockTimer += dt;
+          if (lockTimer >= 260) lock();
+        } else {
+          lockTimer = null;
+        }
+      }
+    }
+
+    render();
+    renderSide();
+  }
+
+  // =====================================================================
+  //  ゲーム進行
+  // =====================================================================
+  function startGame() {
+    audioUnlock();
+    state = 'playing';
+    reset();
+    dasDir = 0; held.left = held.right = held.down = false;
+    titleEl.classList.remove('show');
+    overlay.classList.remove('show');
+    toastEl.classList.remove('show', 'event', 'big');
+    startBtn.blur();
+    Snd.sfx.start();
+    Snd.bgmStart(true);
+  }
+
+  // 一時停止中に出すルール一覧 (スマホではサイドの説明が隠れるため)
+  function rulesHTML() {
+    var L = document.querySelector('.legend-card .legend');
+    return L ? '<div style="text-align:left;display:inline-block;margin-bottom:6px">' +
+               L.innerHTML + '</div>' : '';
+  }
+
+  function togglePause() {
+    if (state === 'playing') {
+      state = 'paused';
+      Snd.bgmStop();
+      dasDir = 0; held.left = held.right = held.down = false;
+      ovTitle.textContent = 'PAUSE';
+      ovSub.innerHTML = rulesHTML() +
+        '<br>' + (isTouch ? '画面をタップで再開' : 'P または Enter で再開');
+      ovButtons.style.display = 'none';
+      overlay.classList.add('show');
+    } else if (state === 'paused') {
+      state = 'playing';
+      overlay.classList.remove('show');
+      Snd.bgmStart(false);
+    }
+  }
+
+  function toggleSound() {
+    soundOn = !soundOn;
+    Snd.setEnabled(soundOn);
+    soundBtn.classList.toggle('off', !soundOn);
+    soundBtn.innerHTML = soundOn ? '&#128266;' : '&#128263;';
+    try { localStorage.setItem('tetris.sound', soundOn ? 'on' : 'off'); } catch (e) {}
+    if (soundOn) { audioUnlock(); if (state === 'playing') Snd.bgmStart(false); }
+  }
+
+  var audioReady = false;
+  function audioUnlock() {
+    if (!audioReady) {
+      Snd.init();
+      Snd.setEnabled(soundOn);
+      audioReady = true;
+    }
+    Snd.resume();
+  }
+
+  // =====================================================================
+  //  キーボード
+  // =====================================================================
+  document.addEventListener('keydown', function (e) {
+    var k = e.key;
+    if (k === ' ' || k === 'ArrowUp' || k === 'ArrowDown' || k === 'ArrowLeft' || k === 'ArrowRight') {
+      e.preventDefault();
+    }
+    audioUnlock();
+    if (e.repeat) return;
+
+    if (k === 'm' || k === 'M') { toggleSound(); return; }
+
+    if (state === 'ready') {
+      if (k === 'Enter' || k === ' ') startGame();
+      return;
+    }
+    if (k === 'Enter') {
+      if (state === 'over') startGame();
+      else if (state === 'paused') togglePause();
+      return;
+    }
+    if (k === 'Escape') {
+      if (state === 'over' || state === 'paused') showTitle();
+      else if (state === 'playing') togglePause();
+      return;
+    }
+    if (k === 'r' || k === 'R') { if (state !== 'ready') startGame(); return; }
+    if (k === 'p' || k === 'P') { togglePause(); return; }
+    if (!canControl()) return;
+
+    switch (k) {
+      case 'ArrowLeft':
+        held.left = true; dasDir = -1; dasTimer = 0; doMove(-1); break;
+      case 'ArrowRight':
+        held.right = true; dasDir = 1; dasTimer = 0; doMove(1); break;
+      case 'ArrowDown':
+        held.down = true; softTimer = 0; doSoftDrop(); break;
+      case ' ': case 'ArrowUp': doHardDrop(); break;
+      case 'c': case 'C': case 'Shift': hold(); break;
+    }
+  });
+
+  document.addEventListener('keyup', function (e) {
+    if (e.key === 'ArrowLeft') { held.left = false; dasDir = held.right ? 1 : 0; dasTimer = 0; }
+    if (e.key === 'ArrowRight') { held.right = false; dasDir = held.left ? -1 : 0; dasTimer = 0; }
+    if (e.key === 'ArrowDown') held.down = false;
+  });
+
+  // =====================================================================
+  //  ボタン
+  // =====================================================================
+  startBtn.addEventListener('click', function () {
+    if (state === 'ready') startGame();
+  });
+  retryBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (state === 'over') startGame();
+  });
+  titleBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (state === 'over') showTitle();
+  });
+  overlay.addEventListener('click', function () {
+    if (state === 'paused') togglePause();
+  });
+  soundBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    toggleSound();
+  });
+
+  // =====================================================================
+  //  タッチ用コントローラ
+  // =====================================================================
+  function padAction(act) {
+    audioUnlock();
+    if (act === 'pause') {
+      if (state === 'ready') startGame();
+      else if (state === 'over') startGame();
+      else togglePause();
+      return;
+    }
+    if (state === 'ready' || state === 'over') return;
+    if (state === 'paused') { togglePause(); return; }
+
+    switch (act) {
+      case 'left':  held.left = true; dasDir = -1; dasTimer = 0; doMove(-1); break;
+      case 'right': held.right = true; dasDir = 1; dasTimer = 0; doMove(1); break;
+      case 'down':  held.down = true; softTimer = 0; doSoftDrop(); break;
+      case 'hold':  if (canControl()) hold(); break;
+      case 'drop':  doHardDrop(); break;
+    }
+  }
+  function padRelease(act) {
+    if (act === 'left')  { held.left = false;  dasDir = held.right ? 1 : 0; dasTimer = 0; }
+    if (act === 'right') { held.right = false; dasDir = held.left ? -1 : 0; dasTimer = 0; }
+    if (act === 'down')  { held.down = false; }
+  }
+
+  (function bindPad() {
+    var btns = padEl.querySelectorAll('.pbtn');
+    for (var i = 0; i < btns.length; i++) {
+      (function (btn) {
+        var act = btn.getAttribute('data-act');
+        function down(e) { e.preventDefault(); btn.classList.add('on'); padAction(act); }
+        function up(e) { e.preventDefault(); btn.classList.remove('on'); padRelease(act); }
+        btn.addEventListener('touchstart', down, { passive: false });
+        btn.addEventListener('touchend', up, { passive: false });
+        btn.addEventListener('touchcancel', up, { passive: false });
+        btn.addEventListener('mousedown', function (e) { if (!isTouch) down(e); });
+        btn.addEventListener('mouseup', function (e) { if (!isTouch) up(e); });
+        btn.addEventListener('mouseleave', function (e) { if (!isTouch) up(e); });
+        btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      })(btns[i]);
+    }
+  })();
+
+  // =====================================================================
+  //  盤面のスワイプ操作 (横なぞりで列を指定 / タップで落とす)
+  // =====================================================================
+  var touch = null;
+  boardCv.addEventListener('touchstart', function (e) {
+    audioUnlock();
+    if (state === 'paused') { togglePause(); e.preventDefault(); return; }
+    var t = e.changedTouches[0];
+    touch = { x: t.clientX, y: t.clientY, sy: t.clientY, time: Date.now(), moved: false };
+    e.preventDefault();
+  }, { passive: false });
+
+  boardCv.addEventListener('touchmove', function (e) {
+    if (!touch || !canControl()) return;
+    var t = e.changedTouches[0];
+    var step = Math.max(16, CELL * 0.7);
+    var dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+    if (Math.abs(dx) > step && Math.abs(dx) > Math.abs(dy)) {
+      doMove(dx > 0 ? 1 : -1);
+      touch.x = t.clientX; touch.moved = true;
+    } else if (dy > step) {
+      doSoftDrop();
+      touch.y = t.clientY; touch.moved = true;
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  boardCv.addEventListener('touchend', function (e) {
+    if (!touch) return;
+    var t = e.changedTouches[0];
+    var elapsed = Date.now() - touch.time;
+    if (canControl() && !touch.moved && elapsed < 260) doHardDrop();
+    touch = null;
+    e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  document.addEventListener('dblclick', function (e) { e.preventDefault(); });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && state === 'playing') togglePause();
+  });
+
+  // =====================================================================
+  //  起動
+  // =====================================================================
+  soundBtn.classList.toggle('off', !soundOn);
+  soundBtn.innerHTML = soundOn ? '&#128266;' : '&#128263;';
+
+  Snd.useFile('audio/bgm-colorix.mp3');
+
+  layout();
+  reset();
+  showTitle();
+  setTimeout(layout, 60);
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

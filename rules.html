@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1020">
+<title>ルールブック</title>
+<style>
+  :root {
+    --bg: #0f1020;
+    --panel: #1a1c33;
+    --line: #2e3157;
+    --text: #e6e8ff;
+    --dim: #8f93c0;
+    --accent: #56d1dc;
+    --gold: #ffd93d;
+    --danger: #ff5c72;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; min-height: 100%;
+    background: radial-gradient(circle at 50% 0%, #1c1f3d 0%, var(--bg) 60%) fixed;
+    color: var(--text);
+    font-family: "Segoe UI", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+    line-height: 1.75;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 24px 18px 80px; }
+
+  header { text-align: center; margin-bottom: 20px; }
+  h1 {
+    font-size: clamp(22px, 6vw, 32px); font-weight: 900; letter-spacing: .1em;
+    margin: 0 0 4px;
+  }
+  h1 span { color: var(--accent); }
+  .lead { color: var(--dim); font-size: 12px; letter-spacing: .1em; margin: 0; }
+
+  nav.tabs {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    margin: 18px 0 22px;
+    position: sticky; top: 0; z-index: 5;
+    padding: 10px 0;
+    background: linear-gradient(180deg, rgba(15,16,32,.96) 70%, rgba(15,16,32,0));
+  }
+  .tab {
+    appearance: none; cursor: pointer;
+    font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .1em;
+    color: var(--dim); background: transparent;
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 9px 20px;
+  }
+  .tab.on { color: #0a0b17; background: var(--accent); border-color: var(--accent); }
+  .tab.home { color: var(--text); }
+
+  section.book { display: none; }
+  section.book.on { display: block; }
+
+  h2 {
+    font-size: 13px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--accent); margin: 30px 0 10px;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px;
+  }
+  h3 { font-size: 15px; margin: 18px 0 6px; color: var(--gold); }
+  p { margin: 6px 0; font-size: 14px; }
+  ul { margin: 6px 0 6px; padding-left: 1.25em; font-size: 14px; }
+  li { margin: 3px 0; }
+  .muted { color: var(--dim); font-size: 13px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 16px; margin: 12px 0;
+  }
+  .card.warn { border-color: #5a2a36; background: #241722; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 8px 0; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; letter-spacing: .1em; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+
+  .chip {
+    display: inline-block; width: 13px; height: 13px; border-radius: 3px;
+    vertical-align: -2px; margin-right: 7px;
+  }
+  .c-col  { background: linear-gradient(135deg,#ff5c72,#ffd93d,#4ad991,#37d3e8); }
+  .c-gar  { background: #4b5065; box-shadow: inset 0 0 0 1px #878da8; }
+  .c-bomb { background: #241018; box-shadow: inset 0 0 0 2px #ff5c72; }
+  .c-cb   { background: conic-gradient(#ff5c72,#ff9f45,#ffd93d,#4ad991,#4a7dff,#c07dff,#ff5c72); }
+  .c-rb   { background: linear-gradient(135deg,#ff5c72,#ffd93d,#4ad991,#37d3e8,#c07dff); }
+  .c-p1   { background: #5cff9d; }
+  .c-p2   { background: #c46bff; }
+  .c-vir  { background: #b6ff3d; }
+
+  kbd {
+    display: inline-block; min-width: 20px; text-align: center;
+    padding: 1px 7px; margin: 0 1px;
+    font: inherit; font-size: 12px; font-weight: 700;
+    background: #24274a; border: 1px solid var(--line);
+    border-bottom-width: 2px; border-radius: 5px;
+  }
+
+  footer { margin-top: 40px; text-align: center; }
+  .btn {
+    display: inline-block; text-decoration: none;
+    font-size: 14px; font-weight: 800; letter-spacing: .14em;
+    color: #0a0b17; background: var(--accent);
+    border-radius: 999px; padding: 11px 30px; margin: 4px;
+  }
+  .btn.ghost {
+    color: var(--text); background: transparent; border: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>RULE<span>BOOK</span></h1>
+    <p class="lead">ルールブック</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab on" type="button" data-tab="colorix">カラーブロック</button>
+    <button class="tab" type="button" data-tab="tetris">テトリス</button>
+    <a class="tab home" href="index.html">&larr; ゲームへ戻る</a>
+  </nav>
+
+  <!-- ===================================================== カラーブロック -->
+  <section class="book on" id="colorix">
+
+    <h2>基本ルール</h2>
+    <ul>
+      <li>1マスのブロックが、中央の列から1個ずつ落ちてきます。回転はありません。</li>
+      <li>同じ色が <b>縦・横・斜めのいずれかに3つ以上</b> つながると消えます。</li>
+      <li>色は最初4種類。8,000点で5種類、20,000点で6種類に増えます。</li>
+      <li>消えた後は上のブロックが落下し、また揃えば <b>連鎖（CHAIN）</b> になります。</li>
+      <li>横一列が埋まっても、<b>色がそろっていなければ消えません</b>。消える条件は同色3つ以上だけです。</li>
+      <li>盤面をすべて消しきると <b>ALL CLEAR</b> ボーナス。</li>
+      <li>盤面は 6列 × 15行。<b>中央の出現位置が埋まるとゲームオーバー</b>です。</li>
+    </ul>
+
+    <h2>スコアの伸ばし方</h2>
+    <div class="card">
+      <h3>まとめ消しボーナス</h3>
+      <p>3個を超えた1個につき倍率 <b>+0.25</b>。<span class="muted">3個=×1.0 / 5個=×1.5 / 8個=×2.25</span></p>
+      <h3>連続消しボーナス（COMBO）</h3>
+      <p>何かを消したブロックを連続で置くたびに倍率 <b>+0.2</b>。何も消えないと0に戻ります。</p>
+      <h3>連鎖（CHAIN）</h3>
+      <p>1回の設置で連続して消えるほど高倍率。上の2つと掛け算になります。</p>
+      <p class="muted">その他: ハードドロップ +2/マス、ソフトドロップ +1/マス</p>
+    </div>
+
+    <h2>ブロックとアイテム</h2>
+    <table>
+      <tr><th style="width:38%">種類</th><th>効果</th></tr>
+      <tr><td><span class="chip c-col"></span>色ブロック</td>
+          <td>3つ以上そろえて消す。基本のブロック。</td></tr>
+      <tr><td><span class="chip c-gar"></span>おじゃまブロック <span class="muted">2,000点〜</span></td>
+          <td><b>そろえても消えない。</b>爆弾・レインボー爆弾・首切り役人でのみ除去でき、カラー爆弾で色ブロックに戻せます。3%の確率で自分の手番に落ちてきます。</td></tr>
+      <tr><td><span class="chip c-bomb"></span>爆弾 <span class="muted">2,000点〜</span></td>
+          <td>着地した瞬間、<b>3×3</b> の範囲を破壊。おじゃまも巻き込みます。</td></tr>
+      <tr><td><span class="chip c-cb"></span>カラー爆弾 <span class="muted">20,000点〜</span></td>
+          <td><b>3×3</b> の範囲をランダムな色に塗り替え。<b>おじゃまも普通の色ブロックに戻ります</b>（1個につき +150×レベル）。</td></tr>
+      <tr><td><span class="chip c-rb"></span>レインボー爆弾 <span class="muted">70,000点〜</span></td>
+          <td><b>真下のブロックと同じ色を、盤面から全部消します。</b>真下が色ブロックでない場合は、盤面でいちばん多い色が対象。</td></tr>
+    </table>
+
+    <h2>寄生虫</h2>
+    <p>一定時間ごとに別のブロックへ引っ越し、<b>いた場所のブロックを変化させます</b>。虫がいるブロックを消せば撃退でき、<b>8〜12秒は復活しません</b>。</p>
+    <p class="muted">同時に存在できる数: スタートは1体 → 8,000点で2体（各タイプ1体） → 120,000点で<b>3体</b>（同じタイプが2体並ぶこともあります）。</p>
+    <table>
+      <tr><td style="width:38%"><span class="chip c-p1"></span><b>変色虫</b>（緑・丸い体）</td>
+          <td>跡のブロックが<b>別の色に変わる</b>。最初から出現。</td></tr>
+      <tr><td><span class="chip c-p2"></span><b>おじゃま虫</b>（紫・トゲトゲ）</td>
+          <td>跡のブロックが<b>おじゃまブロックになる</b>。8,000点から出現。</td></tr>
+    </table>
+
+    <h2>イベント</h2>
+    <p class="muted">イベントはすべて「1秒ごとに抽選」で、いつ起きるか分かりません。</p>
+    <table>
+      <tr><th style="width:30%">イベント</th><th style="width:22%">条件</th><th>内容</th></tr>
+      <tr><td>ランダム落下</td><td class="muted">いつでも</td>
+          <td>上からブロックが降ってくる。2,000点までは色ブロックのみ。以降は約45%がおじゃまブロック（120,000点〜は65%）。</td></tr>
+      <tr><td>停電</td><td class="muted">いつでも</td>
+          <td>5.2秒間、盤面がほぼ見えなくなる（40,000点〜は7.2秒、120,000点〜は8.5秒）。</td></tr>
+      <tr><td>寄生虫発生</td><td class="muted">いつでも</td>
+          <td>盤面のブロック1つに寄生虫がつく。</td></tr>
+      <tr><td>☄ 流星群</td><td class="muted">2,000点〜 / 毎秒1%</td>
+          <td>爆弾が3〜5個まとめて降ってくる。盤面が吹き飛びます。</td></tr>
+      <tr><td><span class="chip c-vir"></span>バイオハザード</td><td class="muted">8,000点〜 / 毎秒0.5%<br>120,000点〜 1.2%</td>
+          <td>ブロック1つが感染し、2.6秒ごとに隣へ広がる（1回に最大2個）。<b>全ブロックが感染するとゲームオーバー。</b>感染ブロックは色を保つので、そろえて消せば治療できます。</td></tr>
+      <tr><td>✨ スコア2倍タイム</td><td class="muted">70,000点〜 / 毎秒1%</td>
+          <td>15秒間、入る得点がすべて2倍。</td></tr>
+      <tr><td>⚊ 首切り役人</td><td class="muted">70,000点〜 / 毎秒0.75%</td>
+          <td>ランダムな1行を、おじゃまごと切り落とす。</td></tr>
+      <tr><td>☢ ブロックシャッフル</td><td class="muted">120,000点〜 / 毎秒0.8%</td>
+          <td>盤面に置かれている色ブロックが<b>すべてランダムな色に入れ替わる</b>。おじゃまブロックはそのまま。大連鎖のきっかけにも、崩壊のきっかけにもなります。</td></tr>
+    </table>
+    <p class="muted">上記以外の通常イベントは毎秒3%（40,000点〜は5.5%、120,000点〜は10%）。発生後は8秒の休止があります。</p>
+
+    <h2>スコアによる解放と難易度</h2>
+    <table>
+      <tr><th style="width:26%">スコア</th><th>変化</th></tr>
+      <tr><td class="n">スタート</td><td>色は4種類。爆弾はまだ出ません</td></tr>
+      <tr><td class="n">2,000</td><td><b>爆弾ブロック・おじゃまブロック 出現</b>／落下速度 +10%／流星群 解禁</td></tr>
+      <tr><td class="n">8,000</td><td>色が5種類に／おじゃま虫 出現（寄生虫は2体まで）／バイオハザード 解禁</td></tr>
+      <tr><td class="n">20,000</td><td>色が6種類に／カラー爆弾 出現／<b>HOLD 解放</b></td></tr>
+      <tr><td class="n">40,000</td><td>落下速度 +20%／イベント発生率アップ／落下物増加／停電が長くなる</td></tr>
+      <tr><td class="n">70,000</td><td>レインボー爆弾 出現／スコア2倍タイム／首切り役人</td></tr>
+      <tr><td class="n">120,000</td><td><b style="color:#ff5c72">大混乱</b>：寄生虫が3体まで／ブロックシャッフル／マイナスイベントが大幅増</td></tr>
+    </table>
+    <div class="card warn">
+      <p><b>120,000点からの「大混乱」</b>では、通常イベントの発生率が毎秒5.5%→<b>10%</b>、バイオハザードが0.5%→<b>1.2%</b>に跳ね上がり、抽選もランダム落下・停電・寄生虫に偏ります。落下物のおじゃま率は65%、停電は8.5秒になります。</p>
+    </div>
+    <div class="card warn">
+      <p><b>HOLD は 20,000点から</b>。それまでは使えません。解放前はホールド枠に鍵アイコンが表示されます。</p>
+    </div>
+
+    <h2>操作</h2>
+    <table>
+      <tr><th style="width:42%">キーボード</th><th>タッチ</th></tr>
+      <tr><td><kbd>←</kbd><kbd>→</kbd> 移動</td><td>◀ ▶ ボタン／横スワイプ</td></tr>
+      <tr><td><kbd>↓</kbd> ソフトドロップ</td><td>▼ ボタン／下スワイプ</td></tr>
+      <tr><td><kbd>Space</kbd> ハードドロップ</td><td>⤓ ボタン／盤面をタップ</td></tr>
+      <tr><td><kbd>C</kbd> ホールド</td><td>HOLD ボタン</td></tr>
+      <tr><td><kbd>P</kbd> 一時停止 ／ <kbd>M</kbd> サウンド</td><td>❙❙ ボタン／右上の🔊</td></tr>
+      <tr><td><kbd>R</kbd> リスタート ／ <kbd>Esc</kbd> タイトルへ</td><td>ゲームオーバー画面のボタン</td></tr>
+    </table>
+  </section>
+
+  <!-- ===================================================== テトリス -->
+  <section class="book" id="tetris">
+
+    <h2>基本ルール</h2>
+    <ul>
+      <li>7種類のテトロミノ（I・J・L・O・S・T・Z）が落ちてきます。</li>
+      <li>横一列をすべて埋めると、その行が消えます。</li>
+      <li>盤面は 10列 × 20行。ブロックが天井を越えるとゲームオーバー。</li>
+      <li>回転は <b>SRS（スーパーローテーションシステム）</b>。壁際や隙間ではウォールキックが働きます。</li>
+      <li>落下位置を示す <b>ゴースト</b>、1つ預けられる <b>ホールド</b>、5つ先まで見える <b>NEXT</b> つき。</li>
+      <li>接地後も約0.5秒の猶予（ロックディレイ）があり、動かすたびにリセットされます（最大15回）。</li>
+    </ul>
+
+    <h2>ライン消去のスコア</h2>
+    <p class="muted">表の数値に、さらに現在のレベルを掛けます。</p>
+    <table>
+      <tr><th style="width:46%">消し方</th><th class="n">得点</th></tr>
+      <tr><td>SINGLE（1列）</td><td class="n">100</td></tr>
+      <tr><td>DOUBLE（2列）</td><td class="n">300</td></tr>
+      <tr><td>TRIPLE（3列）</td><td class="n">500</td></tr>
+      <tr><td>TETRIS（4列）</td><td class="n">800</td></tr>
+    </table>
+
+    <h2>T-Spin</h2>
+    <p>Tミノを<b>回転させて</b>置き、<b>Tの中心の四隅のうち3つ以上</b>が埋まっていると T-Spin として判定されます。凸が向いている側の2つの角が両方埋まっていれば本T-Spin、片方だけなら T-Spin Mini（ただし最終ウォールキックで入った場合は本T-Spin扱い）。</p>
+    <table>
+      <tr><th style="width:46%">種類</th><th class="n">得点</th></tr>
+      <tr><td>T-SPIN（ライン消去なし）</td><td class="n">400</td></tr>
+      <tr><td>T-SPIN SINGLE</td><td class="n">800</td></tr>
+      <tr><td>T-SPIN DOUBLE</td><td class="n">1200</td></tr>
+      <tr><td>T-SPIN TRIPLE</td><td class="n">1600</td></tr>
+      <tr><td>T-SPIN MINI</td><td class="n">100</td></tr>
+      <tr><td>T-SPIN MINI SINGLE</td><td class="n">200</td></tr>
+      <tr><td>T-SPIN MINI DOUBLE</td><td class="n">400</td></tr>
+    </table>
+
+    <h2>ボーナス</h2>
+    <table>
+      <tr><td style="width:38%"><b>Back-to-Back</b></td>
+          <td>TETRIS または T-Spin（ライン消去あり）を連続で決めると <b>×1.5</b>。間に普通の消去を挟むと途切れます。</td></tr>
+      <tr><td><b>COMBO</b></td>
+          <td>連続してラインを消すたびに <b>+50 × 連続数 × レベル</b>。</td></tr>
+      <tr><td><b>PERFECT CLEAR</b></td>
+          <td>盤面を完全に空にすると、消した列数に応じて <b>800〜2000 × レベル</b> の追加ボーナス。</td></tr>
+      <tr><td><b>ドロップ</b></td>
+          <td>ハードドロップ +2/マス、ソフトドロップ +1/マス。</td></tr>
+    </table>
+
+    <h2>レベル</h2>
+    <p>10ライン消すごとにレベルが1上がり、落下速度が上がります。BGMのテンポも同時に速くなります。</p>
+
+    <h2>操作</h2>
+    <table>
+      <tr><th style="width:42%">キーボード</th><th>タッチ</th></tr>
+      <tr><td><kbd>←</kbd><kbd>→</kbd> 移動</td><td>◀ ▶ ボタン／横スワイプ</td></tr>
+      <tr><td><kbd>↓</kbd> ソフトドロップ</td><td>▼ ボタン／下スワイプ</td></tr>
+      <tr><td><kbd>Space</kbd> ハードドロップ</td><td>⤓ ボタン／大きく下スワイプ</td></tr>
+      <tr><td><kbd>↑</kbd> または <kbd>X</kbd> 右回転</td><td>⟳ ボタン／盤面をタップ</td></tr>
+      <tr><td><kbd>Z</kbd> 左回転 ／ <kbd>A</kbd> 180度回転</td><td>⟲ ボタン</td></tr>
+      <tr><td><kbd>C</kbd> ホールド</td><td>HOLD ボタン</td></tr>
+      <tr><td><kbd>P</kbd> 一時停止 ／ <kbd>M</kbd> サウンド</td><td>❙❙ ボタン／右上の🔊</td></tr>
+      <tr><td><kbd>R</kbd> リスタート ／ <kbd>Esc</kbd> タイトルへ</td><td>ゲームオーバー画面のボタン</td></tr>
+    </table>
+  </section>
+
+  <footer>
+    <a class="btn" href="index.html">カラーブロックで遊ぶ</a>
+    <a class="btn ghost" href="tetris.html">テトリスで遊ぶ</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var tabs = document.querySelectorAll('.tab[data-tab]');
+  var books = document.querySelectorAll('section.book');
+
+  function show(name) {
+    var i;
+    for (i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle('on', tabs[i].getAttribute('data-tab') === name);
+    }
+    for (i = 0; i < books.length; i++) {
+      books[i].classList.toggle('on', books[i].id === name);
+    }
+    try { location.hash = name; } catch (e) {}
+    window.scrollTo(0, 0);
+  }
+
+  for (var i = 0; i < tabs.length; i++) {
+    (function (btn) {
+      btn.addEventListener('click', function () { show(btn.getAttribute('data-tab')); });
+    })(tabs[i]);
+  }
+
+  var h = (location.hash || '').replace('#', '');
+  if (h === 'tetris' || h === 'colorix') show(h);
+})();
+</script>
+</body>
+</html>
